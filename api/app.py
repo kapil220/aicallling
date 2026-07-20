@@ -32,6 +32,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
 
 from api.constants import REDIS_URL
+from api.services.saas_config import validate_saas_config
 from api.mcp_server import mcp
 from api.routes.main import router as main_router
 from api.services.pipecat.tracing_config import (
@@ -87,6 +88,7 @@ app = FastAPI(
     ],
 )
 
+validate_saas_config()
 
 # Configure CORS.
 # OSS is typically deployed with UI and API behind a single reverse proxy

@@ -30,6 +30,27 @@ CORS_ALLOWED_ORIGINS = [
     o.strip() for o in os.getenv("CORS_ALLOWED_ORIGINS", "").split(",") if o.strip()
 ]
 AUTH_PROVIDER = os.getenv("AUTH_PROVIDER", "local")
+
+DEPLOYMENT_MODE_SAAS = "saas"
+IS_SAAS_MODE = DEPLOYMENT_MODE == DEPLOYMENT_MODE_SAAS
+
+BRAND_NAME = "VoxAgent"
+
+# Clerk auth (AUTH_PROVIDER=clerk). Issuer is the Clerk frontend API URL,
+# e.g. https://your-app.clerk.accounts.dev — JWKS is fetched from
+# f"{CLERK_ISSUER}/.well-known/jwks.json".
+CLERK_ISSUER = os.getenv("CLERK_ISSUER")
+CLERK_WEBHOOK_SECRET = os.getenv("CLERK_WEBHOOK_SECRET")
+
+# Free trial minutes granted once per newly provisioned organization (saas mode).
+TRIAL_MINUTES = int(os.getenv("TRIAL_MINUTES", "15"))
+
+# Platform-held AI provider keys (saas mode): injected as org default model
+# configuration so tenants never handle provider keys.
+PLATFORM_OPENAI_API_KEY = os.getenv("PLATFORM_OPENAI_API_KEY")
+PLATFORM_DEEPGRAM_API_KEY = os.getenv("PLATFORM_DEEPGRAM_API_KEY")
+PLATFORM_ELEVENLABS_API_KEY = os.getenv("PLATFORM_ELEVENLABS_API_KEY")
+
 DOGRAH_MPS_SECRET_KEY = os.getenv("DOGRAH_MPS_SECRET_KEY", None)
 MPS_API_URL = os.getenv("MPS_API_URL", "https://services.dograh.com")
 
