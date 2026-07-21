@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from loguru import logger
 
+from api.constants import AUTH_PROVIDER
 from api.db import db_client
 from api.db.models import UserModel
 from api.enums import OrganizationConfigurationKey, PostHogEvent
@@ -20,6 +21,11 @@ router = APIRouter(
 
 @router.post("/signup", response_model=AuthResponse)
 async def signup(request: SignupRequest):
+    if AUTH_PROVIDER != "local":
+        # Local email/password auth is an OSS-mode-only flow; saas mode
+        # authenticates via Clerk and never exposes this route.
+        raise HTTPException(status_code=404)
+
     # Check if email is already taken
     existing_user = await db_client.get_user_by_email(request.email)
     if existing_user:
@@ -87,6 +93,9 @@ async def signup(request: SignupRequest):
 
 @router.post("/login", response_model=AuthResponse)
 async def login(request: LoginRequest):
+    if AUTH_PROVIDER != "local":
+        raise HTTPException(status_code=404)
+
     # Look up user by email
     user = await db_client.get_user_by_email(request.email)
     if not user or not user.password_hash:
@@ -119,8 +128,25 @@ async def login(request: LoginRequest):
     )
 
 
+def _require_local_auth() -> None:
+    """Gate dependency: 404 before ``get_user`` even runs.
+
+    ``get_user`` itself branches on AUTH_PROVIDER to pick clerk/stack/local
+    auth, so if this route just checked AUTH_PROVIDER *after* depending on
+    ``get_user``, a saas caller with no/invalid Clerk token would see a 401
+    from ``get_user`` instead of the intended 404 (route not available in
+    this deployment mode). Running this check as an earlier, independent
+    dependency avoids that.
+    """
+    if AUTH_PROVIDER != "local":
+        raise HTTPException(status_code=404)
+
+
 @router.get("/me", response_model=UserResponse)
-async def get_current_user(user: UserModel = Depends(get_user)):
+async def get_current_user(
+    _gate: None = Depends(_require_local_auth),
+    user: UserModel = Depends(get_user),
+):
     return UserResponse(
         id=user.id,
         email=user.email,
