@@ -9,7 +9,7 @@ from pydantic import ValidationError
 from sqlalchemy import select, update
 from sqlalchemy.orm import selectinload
 
-from api.constants import MPS_API_URL
+from api.constants import IS_SAAS_MODE, MPS_API_URL
 from api.db import db_client
 from api.db.models import WorkflowDefinitionModel, WorkflowModel
 from api.enums import OrganizationConfigurationKey
@@ -243,7 +243,11 @@ def merge_ai_model_configuration_v2_secrets(
         existing_dograh = existing_dict.get("dograh") or {}
         incoming_key = incoming_dograh.get("api_key")
         existing_key = existing_dograh.get("api_key")
-        if incoming_key and existing_key and contains_masked_key(incoming_key):
+        if not incoming_key and existing_key:
+            # Absent/empty api_key (saas: the GET response never included one
+            # to begin with) means "keep the stored secret".
+            incoming_dograh["api_key"] = existing_key
+        elif incoming_key and existing_key and contains_masked_key(incoming_key):
             incoming_dograh["api_key"] = resolve_masked_api_keys(
                 incoming_key,
                 existing_key,
@@ -268,7 +272,13 @@ def mask_ai_model_configuration_v2(
     if configuration is None:
         return None
     data = configuration.model_dump(mode="json", exclude_none=True)
-    _mask_secret_fields(data)
+    if IS_SAAS_MODE:
+        # Platform-managed keys: saas tenants never see even a masked tail of
+        # the underlying provider key. Strip the fields entirely rather than
+        # masking them.
+        _strip_secret_fields(data)
+    else:
+        _mask_secret_fields(data)
     return data
 
 
@@ -377,7 +387,9 @@ def _merge_service_secret_fields(incoming: dict, existing: dict):
             continue
         incoming_secret = incoming.get(secret_field)
         existing_secret = existing[secret_field]
-        if incoming_secret is None:
+        if not incoming_secret and existing_secret:
+            # Absent/empty (saas: never sent to the client to begin with, so
+            # the round-trip submits nothing) means "keep the stored secret".
             incoming[secret_field] = existing_secret
         elif contains_masked_key(incoming_secret):
             incoming[secret_field] = resolve_masked_api_keys(
@@ -416,6 +428,19 @@ def _mask_secret_value(value):
     if isinstance(value, list):
         return [mask_key(item) for item in value]
     return mask_key(value)
+
+
+def _strip_secret_fields(value):
+    """Remove secret field values in place (saas GET responses)."""
+    if isinstance(value, dict):
+        for key, nested in list(value.items()):
+            if key in SERVICE_SECRET_FIELDS and nested:
+                value[key] = [] if isinstance(nested, list) else None
+            else:
+                _strip_secret_fields(nested)
+    elif isinstance(value, list):
+        for item in value:
+            _strip_secret_fields(item)
 
 
 def _has_model_services(configuration: EffectiveAIModelConfiguration) -> bool:
