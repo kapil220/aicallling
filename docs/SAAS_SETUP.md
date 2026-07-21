@@ -31,6 +31,23 @@ SaaS mode enables:
 2. Enable **Google** (or other desired providers)
 3. Configure OAuth credentials as needed
 
+### Customize the Session Token (Required)
+
+The backend resolves each request's user from the Clerk session token's claims
+(`api/services/auth/depends.py::_handle_clerk_auth` reads `claims["email"]`),
+but Clerk's default session token does **not** include the user's email
+address. Without this step, every request authenticates the user by their
+Clerk `sub` (id) but `claims.get("email")` is always `None`, so the local
+user's email is never synced.
+
+1. In the Clerk dashboard, navigate to **Sessions** > **Customize session token**
+2. Add the following claim:
+   ```json
+   { "email": "{{user.primary_email_address}}" }
+   ```
+3. Save. New session tokens issued after this change will include the `email`
+   claim; existing sessions pick it up on their next refresh.
+
 ### Create a Webhook Endpoint
 
 1. Navigate to **Webhooks**
