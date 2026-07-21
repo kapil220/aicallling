@@ -28,31 +28,43 @@ async def clerk_webhook(request: Request) -> Response:
     if event_type == "user.updated" and provider_id:
         emails = data.get("email_addresses") or []
         primary_id = data.get("primary_email_address_id")
-        email = next(
-            (
-                e.get("email_address")
-                for e in emails
-                if e.get("id") == primary_id or primary_id is None
-            ),
-            None,
-        )
+        if primary_id is None:
+            # No primary address to resolve against — skip the sync rather than
+            # guessing an arbitrary address from the list.
+            email = None
+        else:
+            email = next(
+                (
+                    e.get("email_address")
+                    for e in emails
+                    if e.get("id") == primary_id
+                ),
+                None,
+            )
         user = await db_client.get_user_by_provider_id(provider_id)
         if user and email and user.email != email:
             await db_client.update_user_email(user.id, email)
             logger.info("Clerk webhook: synced email for user {}", user.id)
 
     elif event_type == "user.deleted" and provider_id:
-        user = await db_client.get_user_by_provider_id(provider_id)
-        if user and user.selected_organization_id:
-            keys = await db_client.get_api_keys_by_organization(
-                user.selected_organization_id
-            )
+        # Target the user's own auto-provisioned org (provider_id
+        # f"org_{clerk_user_id}", set up on first login in
+        # api.services.auth.depends._handle_clerk_auth), never
+        # `user.selected_organization_id` — that may point at a shared org the
+        # deleted user doesn't own, and archiving its keys would break other
+        # members.
+        own_org = await db_client.get_organization_by_provider_id(
+            f"org_{provider_id}"
+        )
+        if own_org:
+            keys = await db_client.get_api_keys_by_organization(own_org.id)
             for key in keys:
                 await db_client.archive_api_key(key.id)
             logger.info(
-                "Clerk webhook: user {} deleted; archived {} API keys",
-                user.id,
+                "Clerk webhook: user {} deleted; archived {} API keys for own org {}",
+                provider_id,
                 len(keys),
+                own_org.id,
             )
         # Data retention beyond key revocation is a phase-2 policy decision
         # recorded in the spec (§2); Clerk-side deletion already blocks login.

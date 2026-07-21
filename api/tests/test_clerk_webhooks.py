@@ -98,6 +98,75 @@ async def test_user_deleted_archives_api_keys(async_client, db_session):
 
 
 @pytest.mark.asyncio
+async def test_user_deleted_does_not_archive_shared_selected_org_keys(
+    async_client, db_session
+):
+    """user.deleted must target the deleted user's own provisioned org
+    (provider_id f"org_{clerk_user_id}"), never `selected_organization_id` —
+    which may point at a shared org whose keys belong to other members."""
+    user, _ = await db_session.get_or_create_user_by_provider_id("user_wh_3")
+    own_org, _ = await db_session.get_or_create_organization_by_provider_id(
+        org_provider_id="org_user_wh_3", user_id=user.id
+    )
+    shared_org, _ = await db_session.get_or_create_organization_by_provider_id(
+        org_provider_id="org_shared_team", user_id=user.id
+    )
+    # The deleted user's *selected* org is the shared one, not their own.
+    await db_session.update_user_selected_organization(user.id, shared_org.id)
+    await db_session.create_api_key(
+        organization_id=own_org.id, name="own", created_by=user.id
+    )
+    await db_session.create_api_key(
+        organization_id=shared_org.id, name="shared", created_by=user.id
+    )
+
+    body = json.dumps({"type": "user.deleted", "data": {"id": "user_wh_3"}})
+    resp = await async_client.post(
+        "/api/v1/webhooks/clerk", content=body, headers=_signed_headers(body)
+    )
+    assert resp.status_code == 204
+
+    own_keys = await db_session.get_api_keys_by_organization(
+        own_org.id, include_archived=True
+    )
+    shared_keys = await db_session.get_api_keys_by_organization(
+        shared_org.id, include_archived=True
+    )
+    assert all(not k.is_active for k in own_keys)
+    assert all(k.is_active for k in shared_keys)
+
+
+@pytest.mark.asyncio
+async def test_user_updated_skips_sync_when_primary_email_missing(
+    async_client, db_session
+):
+    """No primary_email_address_id means we can't tell which address is
+    authoritative — skip the sync rather than picking an arbitrary one."""
+    user, _ = await db_session.get_or_create_user_by_provider_id("user_wh_4")
+    await db_session.update_user_email(user.id, "original@example.com")
+
+    body = json.dumps(
+        {
+            "type": "user.updated",
+            "data": {
+                "id": "user_wh_4",
+                "primary_email_address_id": None,
+                "email_addresses": [
+                    {"id": "em_a", "email_address": "a@example.com"},
+                    {"id": "em_b", "email_address": "b@example.com"},
+                ],
+            },
+        }
+    )
+    resp = await async_client.post(
+        "/api/v1/webhooks/clerk", content=body, headers=_signed_headers(body)
+    )
+    assert resp.status_code == 204
+    refreshed = await db_session.get_user_by_id(user.id)
+    assert refreshed.email == "original@example.com"
+
+
+@pytest.mark.asyncio
 async def test_unknown_event_is_accepted(async_client):
     body = json.dumps({"type": "session.created", "data": {"id": "sess_1"}})
     resp = await async_client.post(

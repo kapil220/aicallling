@@ -25,6 +25,18 @@ class OrganizationClient(BaseDBClient):
             )
             return result.scalars().first()
 
+    async def get_organization_by_provider_id(
+        self, org_provider_id: str
+    ) -> Optional[OrganizationModel]:
+        """Look up an organization by provider_id without creating one."""
+        async with self.async_session() as session:
+            result = await session.execute(
+                select(OrganizationModel).where(
+                    OrganizationModel.provider_id == org_provider_id
+                )
+            )
+            return result.scalars().first()
+
     async def list_organizations(
         self, limit: int = 50, offset: int = 0
     ) -> tuple[list[OrganizationModel], int]:
@@ -111,23 +123,38 @@ class OrganizationClient(BaseDBClient):
             return organization, False
 
     async def add_user_to_organization(
-        self, user_id: int, organization_id: int, role: str = "member"
+        self,
+        user_id: int,
+        organization_id: int,
+        role: str = "member",
+        overwrite_role: bool = False,
     ) -> None:
         """Ensure that a user is linked to an organization (many-to-many).
 
-        Idempotent: re-adding an existing member updates the role rather than
-        erroring or duplicating the row (matches invite-idempotency UX).
+        Idempotent by default: re-adding an existing member is a no-op on the
+        role (``ON CONFLICT DO NOTHING``) so lazy re-provisioning on every
+        login (auth.py, services/auth/depends.py) can never demote an
+        existing admin — e.g. two concurrent first-login requests for the same
+        newly-created org must not race each other's role assignment.
+
+        Pass ``overwrite_role=True`` for call sites that intentionally want to
+        change an existing member's role on re-add (e.g. re-inviting a member
+        with a different role); this keeps the previous "upsert role"
+        behavior for those explicit call sites only.
         """
         async with self.async_session() as session:
             stmt = insert(organization_users_association).values(
                 user_id=user_id, organization_id=organization_id, role=role
             )
-            # ON CONFLICT: the (user_id, organization_id) PK triggers the conflict;
-            # update the role so re-invites can change it.
-            stmt = stmt.on_conflict_do_update(
-                index_elements=["user_id", "organization_id"],
-                set_={"role": stmt.excluded.role},
-            )
+            if overwrite_role:
+                stmt = stmt.on_conflict_do_update(
+                    index_elements=["user_id", "organization_id"],
+                    set_={"role": stmt.excluded.role},
+                )
+            else:
+                stmt = stmt.on_conflict_do_nothing(
+                    index_elements=["user_id", "organization_id"],
+                )
 
             await session.execute(stmt)
             await session.commit()
