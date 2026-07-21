@@ -10,7 +10,12 @@ from api.db import db_client
 from api.db.models import UserModel
 from api.enums import PostHogEvent, Role, role_at_least
 from api.schemas.ai_model_configuration import EffectiveAIModelConfiguration
+from api.services.auth.clerk_auth import verify_clerk_token
 from api.services.auth.stack_auth import stackauth
+from api.services.billing.trial import grant_signup_trial
+from api.services.configuration.platform_defaults import (
+    seed_platform_model_configuration,
+)
 from api.services.configuration.registry import ServiceProviders
 from api.services.mps_billing import ensure_hosted_mps_billing_account_v2
 from api.services.posthog_client import capture_event
@@ -32,6 +37,12 @@ async def get_user(
     # ------------------------------------------------------------------
     if AUTH_PROVIDER == "local":
         return await _handle_oss_auth(authorization)
+
+    # ------------------------------------------------------------------
+    # Clerk-hosted auth (saas mode)
+    # ------------------------------------------------------------------
+    if AUTH_PROVIDER == "clerk":
+        return await _handle_clerk_auth(authorization)
 
     # ------------------------------------------------------------------
     # 1. Validate and fetch the authenticated Stack user
@@ -243,6 +254,80 @@ async def _handle_oss_auth(authorization: str | None) -> UserModel:
         raise
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+
+async def _handle_clerk_auth(authorization: str | None) -> UserModel:
+    """Resolve a Clerk session token to a local user, provisioning on first login.
+
+    Clerk is identity-only (spec §2): orgs/roles stay internal. Each Clerk user
+    gets one auto-created org (provider_id `org_<clerk_user_id>`), mirroring the
+    local-auth signup invariants: creator is admin, selected org set, trial
+    granted, platform model config seeded.
+    """
+    claims = await verify_clerk_token(authorization)
+    provider_id = claims["sub"]
+
+    try:
+        user_model, user_was_created = await db_client.get_or_create_user_by_provider_id(
+            provider_id
+        )
+        clerk_email = claims.get("email")
+        if clerk_email and user_model.email != clerk_email:
+            await db_client.update_user_email(user_model.id, clerk_email)
+            user_model.email = clerk_email
+        if user_was_created:
+            capture_event(
+                distinct_id=provider_id,
+                event=PostHogEvent.SIGNED_UP,
+                properties={"auth_provider": "clerk"},
+            )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Error while creating user from database {e}"
+        )
+
+    try:
+        organization, org_was_created = (
+            await db_client.get_or_create_organization_by_provider_id(
+                org_provider_id=f"org_{provider_id}", user_id=user_model.id
+            )
+        )
+        if user_model.selected_organization_id != organization.id:
+            await db_client.add_user_to_organization(
+                user_model.id,
+                organization.id,
+                role="admin" if org_was_created else "member",
+            )
+            await db_client.update_user_selected_organization(
+                user_model.id, organization.id
+            )
+            user_model.selected_organization_id = organization.id
+
+        if org_was_created:
+            try:
+                await grant_signup_trial(organization.id, created_by=user_model.id)
+            except Exception:
+                logger.warning(
+                    "Trial grant failed for org {}", organization.id, exc_info=True
+                )
+            try:
+                await seed_platform_model_configuration(organization.id)
+            except Exception:
+                logger.warning(
+                    "Platform config seed failed for org {}",
+                    organization.id,
+                    exc_info=True,
+                )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to map user to organization: {exc}"
+        )
+
+    return user_model
 
 
 async def _handle_api_key_auth(api_key: str) -> UserModel:
