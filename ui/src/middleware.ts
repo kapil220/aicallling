@@ -1,4 +1,5 @@
-import type { NextRequest } from 'next/server';
+import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
+import type { NextFetchEvent, NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 
 import { getServerBackendUrl } from '@/lib/apiClient';
@@ -7,6 +8,14 @@ const OSS_TOKEN_COOKIE = 'dograh_auth_token';
 
 // Paths that don't require authentication in OSS mode
 const PUBLIC_PATHS = ['/auth/login', '/auth/signup'];
+
+const isPublicClerkRoute = createRouteMatcher(['/auth/login(.*)', '/auth/signup(.*)']);
+
+const protectedClerkMiddleware = clerkMiddleware(async (auth, request) => {
+  if (!isPublicClerkRoute(request)) {
+    await auth.protect({ unauthenticatedUrl: new URL('/auth/login', request.url).toString() });
+  }
+});
 
 let cachedAuthProvider: string | null = null;
 
@@ -31,8 +40,12 @@ async function fetchAuthProvider(): Promise<string> {
   return cachedAuthProvider;
 }
 
-export async function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest, event: NextFetchEvent) {
   const authProvider = await fetchAuthProvider();
+
+  if (authProvider === 'clerk') {
+    return protectedClerkMiddleware(request, event);
+  }
 
   // Only handle OSS mode
   if (authProvider !== 'local') {

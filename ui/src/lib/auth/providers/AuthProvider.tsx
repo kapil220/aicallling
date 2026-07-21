@@ -36,6 +36,12 @@ const LocalProviderWrapper = lazy(() =>
   }))
 );
 
+const ClerkProviderWrapper = lazy(() =>
+  import('./ClerkProviderWrapper').then(module => ({
+    default: module.ClerkProviderWrapper
+  }))
+);
+
 const LoadingFallback = (
   <div className="flex items-center justify-center min-h-screen">
     <Loader2 className="w-8 h-8 animate-spin" />
@@ -69,6 +75,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         <StackProviderWrapper>
           {children}
         </StackProviderWrapper>
+      </Suspense>
+    );
+  }
+
+  // For Clerk provider, use the dedicated wrapper
+  if (authProvider === 'clerk') {
+    return (
+      <Suspense fallback={LoadingFallback}>
+        <ClerkProviderWrapper>
+          {children}
+        </ClerkProviderWrapper>
       </Suspense>
     );
   }
