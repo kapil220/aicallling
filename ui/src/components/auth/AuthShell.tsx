@@ -10,6 +10,7 @@
 import type { ReactNode } from "react";
 
 import { BrandLogo } from "@/components/BrandLogo";
+import { BRAND_NAME } from "@/constants/brand";
 
 const HIGHLIGHTS = [
   "Speech-to-speech",
@@ -76,7 +77,7 @@ export function AuthShell({
             Need on-prem, data residency &amp; a data perimeter?
           </h2>
           <p className="text-sm text-zinc-400">
-            We deploy Dograh inside your environment for regulated and
+            We deploy {BRAND_NAME} inside your environment for regulated and
             high-scale teams.
           </p>
           {enterpriseSlot}
