@@ -103,6 +103,7 @@ class UserConfigurationKey(Enum):
         "MODEL_CONFIGURATION"  # Legacy per-user v1 AI model configuration
     )
     ONBOARDING = "ONBOARDING"  # Post-signup onboarding state (gate, tooltips, actions)
+    WORKSPACE_PROFILE = "WORKSPACE_PROFILE"  # Company name / timezone profile settings
 
 
 class WorkflowStatus(Enum):

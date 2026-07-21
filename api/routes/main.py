@@ -33,6 +33,7 @@ from api.routes.workflow import router as workflow_router
 from api.routes.workflow_embed import router as workflow_embed_router
 from api.routes.workflow_recording import router as workflow_recording_router
 from api.routes.workflow_text_chat import router as workflow_text_chat_router
+from api.routes.workspace_profile import router as workspace_profile_router
 from api.services.integrations import all_routers
 
 router = APIRouter(
@@ -50,6 +51,7 @@ router.include_router(clerk_webhooks_router)
 router.include_router(workflow_router)
 router.include_router(workflow_text_chat_router)
 router.include_router(user_router)
+router.include_router(workspace_profile_router)
 router.include_router(campaign_router)
 router.include_router(credentials_router)
 router.include_router(tool_router)
