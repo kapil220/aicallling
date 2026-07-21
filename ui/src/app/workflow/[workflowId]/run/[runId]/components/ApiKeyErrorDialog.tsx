@@ -2,6 +2,7 @@ import { AlertCircle, CreditCard, Key } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { BRAND_NAME } from "@/constants/brand";
 
 interface ApiKeyErrorDialogProps {
     open: boolean;
@@ -43,7 +44,7 @@ export const ApiKeyErrorDialog = ({
                                 <p className="font-medium text-foreground">{error}</p>
                                 {isBillingCreditsError && (
                                     <p className="text-muted-foreground">
-                                        Purchase credits from Billing to continue using Dograh-managed models.
+                                        Purchase credits from Billing to continue using {BRAND_NAME}-managed models.
                                     </p>
                                 )}
                             </div>

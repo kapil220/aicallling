@@ -2,14 +2,21 @@
 
 import Link from 'next/link';
 
+import { MinutesRemainingCard } from '@/components/billing/MinutesRemainingCard';
 import { GitHubStarBadge } from '@/components/layout/GitHubStarBadge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { BRAND_NAME } from '@/constants/brand';
+import { useAppConfig } from '@/context/AppConfigContext';
 import { useAuth } from '@/lib/auth';
 
 export default function OverviewPage() {
-    const { user, provider } = useAuth();
-    const isOSSMode = provider !== 'stack';
+    const { user } = useAuth();
+    const { config } = useAppConfig();
+    // `provider !== 'stack'` used to stand in for "OSS", but that wrongly
+    // includes 'clerk' (saas) as OSS too — use the deployment mode directly.
+    const isOSSMode = config?.deploymentMode === 'oss';
+    const isSaasMode = config?.deploymentMode === 'saas';
 
     return (
         <div className="container mx-auto px-4 py-8">
@@ -19,7 +26,7 @@ export default function OverviewPage() {
                     <CardHeader>
                         <CardTitle className="text-3xl">
                             {isOSSMode ? (
-                                "Welcome to Dograh"
+                                `Welcome to ${BRAND_NAME}`
                             ) : (
                                 `Welcome${user?.displayName ? `, ${user.displayName.split(' ')[0]}` : ''}!`
                             )}
@@ -42,6 +49,12 @@ export default function OverviewPage() {
                         )}
                     </CardContent>
                 </Card>
+
+                {isSaasMode && (
+                    <div className="mb-8">
+                        <MinutesRemainingCard />
+                    </div>
+                )}
 
                 {/* Quick Actions */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -83,7 +96,7 @@ export default function OverviewPage() {
                     <CardHeader>
                         <CardTitle>Resources</CardTitle>
                         <CardDescription>
-                            Get help and learn more about Dograh
+                            Get help and learn more about {BRAND_NAME}
                         </CardDescription>
                     </CardHeader>
                     <CardContent>

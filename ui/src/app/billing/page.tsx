@@ -14,8 +14,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
-import { createMpsCreditPurchaseUrlApiV1OrganizationsUsageMpsCreditsPurchaseUrlPost, getBillingCreditsApiV1OrganizationsBillingCreditsGet } from "@/client/sdk.gen";
-import type { MpsBillingCreditsResponse, MpsCreditLedgerEntryResponse } from "@/client/types.gen";
+import { createMpsCreditPurchaseUrlApiV1OrganizationsUsageMpsCreditsPurchaseUrlPost, getBillingCreditsApiV1OrganizationsBillingCreditsGet, getLedgerApiV1BillingLedgerGet } from "@/client/sdk.gen";
+import type { LedgerEntryResponse, MpsBillingCreditsResponse, MpsCreditLedgerEntryResponse } from "@/client/types.gen";
+import { MinutesRemainingCard } from "@/components/billing/MinutesRemainingCard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -118,6 +119,7 @@ export default function BillingPage() {
     const auth = useAuth();
     const { config } = useAppConfig();
     const [credits, setCredits] = useState<MpsBillingCreditsResponse | null>(null);
+    const [localLedger, setLocalLedger] = useState<LedgerEntryResponse[] | null>(null);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [purchasing, setPurchasing] = useState(false);
@@ -127,7 +129,10 @@ export default function BillingPage() {
 
     const isBillingV2 = credits?.billing_version === "v2";
     const isOssMode = config?.deploymentMode === "oss";
-    const canPurchaseCredits = isBillingV2 && !isOssMode;
+    const isSaasMode = config?.deploymentMode === "saas";
+    // Credit purchases (MPS checkout) are a self-hosted-only flow. In saas
+    // mode billing is platform-managed — no purchase UI, no MPS upsells.
+    const canPurchaseCredits = isBillingV2 && !isOssMode && !isSaasMode;
     const totalQuota = credits?.total_quota ?? 0;
     const remainingCredits = credits?.remaining_credits ?? 0;
     const usedCredits = credits?.total_credits_used ?? 0;
@@ -158,6 +163,20 @@ export default function BillingPage() {
         }
 
         try {
+            // Saas mode has no MPS-hosted billing account — read straight from
+            // the local credit ledger instead of the MPS-shaped org endpoint
+            // (which OSS/self-hosted still uses for its purchase-flow UI).
+            if (isSaasMode) {
+                const response = await getLedgerApiV1BillingLedgerGet({
+                    query: { limit: LEDGER_PAGE_SIZE },
+                });
+                if (response.error) {
+                    throw new Error("Failed to fetch billing ledger");
+                }
+                setLocalLedger(response.data ?? []);
+                return;
+            }
+
             const response = await getBillingCreditsApiV1OrganizationsBillingCreditsGet({
                 query: { page, limit: LEDGER_PAGE_SIZE },
             });
@@ -174,7 +193,7 @@ export default function BillingPage() {
             setLoading(false);
             setRefreshing(false);
         }
-    }, [auth.isAuthenticated, auth.loading]);
+    }, [auth.isAuthenticated, auth.loading, isSaasMode]);
 
     useEffect(() => {
         const nextPage = getPageFromSearchParams(searchParams);
@@ -241,6 +260,70 @@ export default function BillingPage() {
                     <Skeleton className="h-36 rounded-lg" />
                 </div>
                 <Skeleton className="h-80 rounded-lg" />
+            </div>
+        );
+    }
+
+    if (isSaasMode) {
+        const entries = localLedger ?? [];
+        return (
+            <div className="container mx-auto p-6 space-y-6">
+                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                    <div>
+                        <h1 className="text-3xl font-bold mb-2">Billing</h1>
+                        <p className="text-muted-foreground">
+                            Credits, balance, and recent activity for your organization.
+                        </p>
+                    </div>
+                    <Button variant="outline" onClick={handleRefresh} disabled={refreshing}>
+                        <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? "animate-spin" : ""}`} />
+                        Refresh
+                    </Button>
+                </div>
+
+                <MinutesRemainingCard />
+
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Recent Activity</CardTitle>
+                        <CardDescription>Grants and usage debits on your credit balance.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        {entries.length > 0 ? (
+                            <div className="bg-card border rounded-lg overflow-x-auto shadow-sm">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow className="bg-muted/50">
+                                            <TableHead>Date</TableHead>
+                                            <TableHead>Type</TableHead>
+                                            <TableHead>Description</TableHead>
+                                            <TableHead className="text-right">Amount</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {entries.map((entry) => (
+                                            <TableRow key={entry.id}>
+                                                <TableCell>{entry.created_at ? formatDate(entry.created_at) : "-"}</TableCell>
+                                                <TableCell>
+                                                    <Badge variant="secondary">{formatTitleCase(entry.type)}</Badge>
+                                                </TableCell>
+                                                <TableCell>{entry.description || "-"}</TableCell>
+                                                <TableCell className={`text-right font-medium ${entry.amount_cents >= 0 ? "text-green-600" : "text-destructive"}`}>
+                                                    {entry.amount_cents >= 0 ? "+" : ""}
+                                                    {formatAmount(entry.amount_cents, "usd")}
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                        ) : (
+                            <div className="rounded-lg border border-dashed p-8 text-center text-muted-foreground">
+                                No activity yet
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
             </div>
         );
     }

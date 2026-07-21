@@ -12,6 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { BRAND_NAME } from "@/constants/brand";
 
 export default function SettingsPage() {
   return (
@@ -41,7 +42,7 @@ export default function SettingsPage() {
           <CardHeader>
             <CardTitle>MCP Server</CardTitle>
             <CardDescription>
-              Let AI agents access your Dograh workspace and documentation via
+              Let AI agents access your {BRAND_NAME} workspace and documentation via
               the Model Context Protocol.{" "}
               <a
                 href="https://docs.dograh.com/integrations/mcp"

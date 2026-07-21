@@ -17,7 +17,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { BRAND_NAME } from "@/constants/brand";
 import { LANGUAGE_DISPLAY_NAMES } from "@/constants/languages";
+import { useAppConfig } from "@/context/AppConfigContext";
 
 type ModelMode = "realtime" | "dograh" | "byok";
 
@@ -198,7 +200,16 @@ function buildDograhState(
 function preferredMode(
     configuration: Record<string, unknown> | null,
     effectiveConfiguration: Record<string, unknown> | null,
+    isSaasMode: boolean,
 ): ModelMode {
+    // Saas mode has no managed/"dograh" tab (platform keys are configured by
+    // the operator, not chosen per-tenant) — byok is the only self-serve mode.
+    if (isSaasMode) {
+        if (configuration?.mode === "byok") {
+            return asRecord(configuration.byok)?.mode === "realtime" ? "realtime" : "byok";
+        }
+        return Boolean(effectiveConfiguration?.is_realtime) ? "realtime" : "byok";
+    }
     if (configuration?.mode === "dograh") return "dograh";
     if (configuration?.mode === "byok") {
         return asRecord(configuration.byok)?.mode === "realtime" ? "realtime" : "byok";
@@ -258,7 +269,14 @@ export function AIModelConfigurationV2Editor({
     submitLabel = "Save Configuration",
 }: AIModelConfigurationV2EditorProps) {
     const defaultsForByok = useMemo(() => byokDefaults(defaults), [defaults]);
-    const [mode, setMode] = useState<ModelMode>("dograh");
+    // In saas mode, keys are platform-managed — hide the Dograh service-key
+    // input while leaving voice/speed/language pickers fully visible.
+    const { config: appConfig } = useAppConfig();
+    const isSaasMode = appConfig?.deploymentMode === "saas";
+    // Saas mode has no "dograh" tab — default straight to byok so the initial
+    // render (before the resolved-configuration effect below runs) never
+    // shows a tab value that doesn't exist in the TabsList.
+    const [mode, setMode] = useState<ModelMode>(isSaasMode ? "byok" : "dograh");
     const [dograh, setDograh] = useState<DograhFormState>(() => ({
         api_key: "",
         voice: defaults.dograh.defaults.voice,
@@ -276,13 +294,13 @@ export function AIModelConfigurationV2Editor({
     useEffect(() => {
         const rawConfiguration = asRecord(configuration);
         const rawEffectiveConfiguration = asRecord(effectiveConfiguration);
-        setMode(preferredMode(rawConfiguration, rawEffectiveConfiguration));
+        setMode(preferredMode(rawConfiguration, rawEffectiveConfiguration, isSaasMode));
         const nextDograh = buildDograhState(defaults, rawConfiguration, rawEffectiveConfiguration);
         setDograh(nextDograh);
         setIsCustomVoice(allowCustomVoice && !defaults.dograh.voices.includes(nextDograh.voice));
         setRealtimeInitialConfig(getByokInitialConfig(rawConfiguration, rawEffectiveConfiguration, true));
         setPipelineInitialConfig(getByokInitialConfig(rawConfiguration, rawEffectiveConfiguration, false));
-    }, [configuration, defaults, effectiveConfiguration, allowCustomVoice]);
+    }, [configuration, defaults, effectiveConfiguration, allowCustomVoice, isSaasMode]);
 
     const saveDograhConfiguration = async () => {
         setIsSavingDograh(true);
@@ -345,9 +363,9 @@ export function AIModelConfigurationV2Editor({
             )}
 
             <Tabs value={mode} onValueChange={(value) => setMode(value as ModelMode)} className="space-y-6">
-                <TabsList className="grid w-full grid-cols-3">
+                <TabsList className={`grid w-full ${isSaasMode ? "grid-cols-2" : "grid-cols-3"}`}>
                     <TabsTrigger value="realtime">Speech to Speech</TabsTrigger>
-                    <TabsTrigger value="dograh">Dograh</TabsTrigger>
+                    {!isSaasMode && <TabsTrigger value="dograh">{BRAND_NAME}</TabsTrigger>}
                     <TabsTrigger value="byok">BYOK</TabsTrigger>
                 </TabsList>
 
@@ -366,6 +384,7 @@ export function AIModelConfigurationV2Editor({
                     />
                 </TabsContent>
 
+                {!isSaasMode && (
                 <TabsContent value="dograh" className="mt-0">
                     <Card>
                         <CardContent className="pt-6">
@@ -469,6 +488,7 @@ export function AIModelConfigurationV2Editor({
                         </CardContent>
                     </Card>
                 </TabsContent>
+                )}
 
                 <TabsContent value="byok" className="mt-0">
                     <ServiceConfigurationForm

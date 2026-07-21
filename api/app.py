@@ -3,6 +3,7 @@
 import sentry_sdk
 
 from api.constants import (
+    BRAND_NAME,
     CORS_ALLOWED_ORIGINS,
     DEPLOYMENT_MODE,
     ENABLE_TELEMETRY,
@@ -38,6 +39,7 @@ from api.services.pipecat.tracing_config import (
     handle_langfuse_sync,
     load_all_org_langfuse_credentials,
 )
+from api.services.saas_config import validate_saas_config
 from api.services.worker_sync.manager import (
     WorkerSyncManager,
     set_worker_sync_manager,
@@ -76,8 +78,8 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Dograh API",
-    description="API for the Dograh app",
+    title=f"{BRAND_NAME} API",
+    description=f"API for the {BRAND_NAME} app",
     version="1.0.0",
     openapi_url=f"{API_PREFIX}/openapi.json",
     lifespan=lifespan,
@@ -87,6 +89,7 @@ app = FastAPI(
     ],
 )
 
+validate_saas_config()
 
 # Configure CORS.
 # OSS is typically deployed with UI and API behind a single reverse proxy

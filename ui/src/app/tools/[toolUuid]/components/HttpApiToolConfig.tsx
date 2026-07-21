@@ -19,6 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { BRAND_NAME } from "@/constants/brand";
 
 export interface HttpApiToolConfigProps {
     name: string;
@@ -197,7 +198,7 @@ export function HttpApiToolConfig({
                         <div className="grid gap-2 pt-4 border-t">
                             <Label>Preset Parameters</Label>
                             <Label className="text-xs text-muted-foreground">
-                                Add values that Dograh should inject at runtime. These are not exposed to the LLM and can use
+                                Add values that {BRAND_NAME} should inject at runtime. These are not exposed to the LLM and can use
                                 workflow templates like {`{{initial_context.phone_number}}`} or fixed literals.
                             </Label>
                             <PresetParameterEditor

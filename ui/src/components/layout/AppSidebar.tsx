@@ -1,5 +1,6 @@
 "use client";
 
+import { UserButton } from "@clerk/nextjs";
 import type { Team } from "@stackframe/stack";
 import {
   AlertTriangle,
@@ -19,6 +20,7 @@ import {
   Phone,
   Settings,
   TrendingUp,
+  User,
   UserRound,
   Workflow,
   Wrench,
@@ -461,6 +463,10 @@ export function AppSidebar() {
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => router.push("/profile")} className="cursor-pointer">
+                    <User className="mr-2 h-4 w-4" />
+                    Profile
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => router.push("/settings")} className="cursor-pointer">
                     <Settings className="mr-2 h-4 w-4" />
                     Platform Settings
@@ -471,6 +477,11 @@ export function AppSidebar() {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
+              {provider === "clerk" && (
+                <UserButton
+                  appearance={{ elements: { avatarBox: "h-7 w-7" } }}
+                />
+              )}
               {hireExpertButton}
             </div>
           )}
@@ -501,6 +512,10 @@ export function AppSidebar() {
                   <DropdownMenuItem onClick={() => router.push("/handler/account-settings")} className="cursor-pointer">
                     <Settings className="mr-2 h-4 w-4" />
                     Account settings
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => router.push("/profile")} className="cursor-pointer">
+                    <User className="mr-2 h-4 w-4" />
+                    Profile
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => router.push("/settings")} className="cursor-pointer">
                     <Settings className="mr-2 h-4 w-4" />

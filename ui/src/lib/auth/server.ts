@@ -1,12 +1,13 @@
 import "server-only";
 
+import { auth } from '@clerk/nextjs/server';
 import type { CurrentUser, StackServerApp } from '@stackframe/stack';
 import { cookies } from 'next/headers';
 
 import logger from '@/lib/logger';
 
 import { getAuthProvider } from './config';
-import type { LocalUser } from './types';
+import type { ClerkUser, LocalUser } from './types';
 
 // Server-side auth utilities for SSR pages
 // This file should only be imported in server components
@@ -36,9 +37,9 @@ export async function getStackServerApp(): Promise<StackServerApp<boolean, strin
 
 /**
  * Get the current user on the server side (for SSR)
- * Returns CurrentUser for stack, LocalUser for OSS, or null if not authenticated
+ * Returns CurrentUser for stack, LocalUser for OSS, ClerkUser for Clerk, or null if not authenticated
  */
-export async function getServerUser(): Promise<CurrentUser | LocalUser | null> {
+export async function getServerUser(): Promise<CurrentUser | LocalUser | ClerkUser | null> {
   const authProvider = await getAuthProvider();
 
   if (authProvider === 'stack') {
@@ -51,6 +52,20 @@ export async function getServerUser(): Promise<CurrentUser | LocalUser | null> {
         logger.error('Error getting user from Stack:', error);
         return null;
       }
+    }
+  } else if (authProvider === 'clerk') {
+    try {
+      const { userId } = await auth();
+      if (!userId) {
+        return null;
+      }
+      return {
+        id: userId,
+        provider: 'clerk',
+      };
+    } catch (error) {
+      logger.error('Error getting user from Clerk:', error);
+      return null;
     }
   } else if (authProvider === 'local') {
     // For OSS mode, get user from cookies (created by middleware)
@@ -126,8 +141,16 @@ export async function getServerAccessToken(): Promise<string | null> {
   if (authProvider === 'stack') {
     const user = await getServerUser();
     if (user && 'getAuthJson' in user) {
-      const auth = await user.getAuthJson();
-      return auth?.accessToken ?? null;
+      const authJson = await user.getAuthJson();
+      return authJson?.accessToken ?? null;
+    }
+  } else if (authProvider === 'clerk') {
+    try {
+      const { getToken } = await auth();
+      return (await getToken()) ?? null;
+    } catch (error) {
+      logger.error('Error getting access token from Clerk:', error);
+      return null;
     }
   } else if (authProvider === 'local') {
     // Get token from cookies (created by middleware)

@@ -1,7 +1,8 @@
 "use client";
 
+import { SignUp } from "@clerk/nextjs";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { signupApiV1AuthSignupPost } from "@/client/sdk.gen";
@@ -10,12 +11,24 @@ import { AuthShell } from "@/components/auth/AuthShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import logger from "@/lib/logger";
 
 export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [authProvider, setAuthProvider] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/config/auth")
+      .then((res) => res.json())
+      .then((data) => setAuthProvider(data.provider || "local"))
+      .catch((e) => {
+        logger.error(`Got error ${e} while fetching auth provider`);
+        setAuthProvider("local");
+      });
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,6 +70,18 @@ export default function SignupPage() {
       setLoading(false);
     }
   };
+
+  if (authProvider === "clerk") {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <SignUp
+          routing="hash"
+          signInUrl="/auth/login"
+          fallbackRedirectUrl="/after-sign-in"
+        />
+      </div>
+    );
+  }
 
   return (
     <AuthShell enterpriseSlot={<AuthEnterpriseCTA />}>

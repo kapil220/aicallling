@@ -3,7 +3,7 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from loguru import logger
 
-from api.constants import DEPLOYMENT_MODE
+from api.constants import DEPLOYMENT_MODE, IS_SAAS_MODE
 from api.db.models import UserModel
 from api.schemas.service_key import (
     CreateServiceKeyRequest,
@@ -22,6 +22,10 @@ async def get_service_keys(
     user: UserModel = Depends(get_user),
 ):
     """Get all service keys for the user's organization."""
+    if IS_SAAS_MODE:
+        # Service keys are an MPS (self-hosted BYOK) concept; saas mode owns
+        # platform-managed keys and a local billing ledger instead.
+        raise HTTPException(status_code=404)
     try:
         # For OSS mode, use provider_id as created_by
         # For authenticated mode, use organization_id
@@ -51,6 +55,8 @@ async def create_service_key(
     user: UserModel = Depends(get_user),
 ):
     """Create a new service key for the user's organization."""
+    if IS_SAAS_MODE:
+        raise HTTPException(status_code=404)
     try:
         # For OSS mode, don't pass organization_id
         # For authenticated mode, pass organization_id
@@ -89,6 +95,8 @@ async def archive_service_key(
     user: UserModel = Depends(get_user),
 ):
     """Archive a service key."""
+    if IS_SAAS_MODE:
+        raise HTTPException(status_code=404)
     try:
         # For OSS mode, use provider_id as created_by for validation
         # For authenticated mode, use organization_id for validation
@@ -134,6 +142,8 @@ async def reactivate_service_key(
     reactivation is not supported by MPS. Once archived, a service key
     cannot be reactivated and a new key must be created instead.
     """
+    if IS_SAAS_MODE:
+        raise HTTPException(status_code=404)
     # MPS does not support reactivation of archived service keys
     raise HTTPException(
         status_code=501,  # Not Implemented

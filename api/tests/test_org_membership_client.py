@@ -103,6 +103,39 @@ async def test_upsert_member_role_idempotent(real_db):
 
 
 @pytest.mark.asyncio
+async def test_add_user_to_organization_does_not_demote_existing_admin(real_db):
+    """Re-adding an existing member (e.g. a concurrent lazy-provision call
+    racing against itself on first login) must never downgrade their role —
+    this is the default (non-overwrite) upsert semantics used by auth call
+    sites, as opposed to the explicit re-invite path."""
+    from api.db import db_client
+
+    org_id, (admin_id,) = await real_db(1)
+    await db_client.add_user_to_organization(admin_id, org_id, role="admin")
+    # Simulate a second concurrent request re-provisioning the same user with
+    # a "member" role (mirrors the org_was_created=False branch racing the
+    # org_was_created=True branch for the same creator).
+    await db_client.add_user_to_organization(admin_id, org_id, role="member")
+    assert await db_client.get_member_role(org_id, admin_id) == "admin"
+
+
+@pytest.mark.asyncio
+async def test_add_user_to_organization_overwrite_role_changes_existing_member(
+    real_db,
+):
+    """The explicit overwrite path (re-invite) should still be able to change
+    an existing member's role."""
+    from api.db import db_client
+
+    org_id, (user_id,) = await real_db(1)
+    await db_client.add_user_to_organization(user_id, org_id, role="member")
+    await db_client.add_user_to_organization(
+        user_id, org_id, role="admin", overwrite_role=True
+    )
+    assert await db_client.get_member_role(org_id, user_id) == "admin"
+
+
+@pytest.mark.asyncio
 async def test_last_admin_cannot_be_demoted(real_db):
     from api.db import db_client
 
