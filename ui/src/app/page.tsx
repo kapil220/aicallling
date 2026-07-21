@@ -13,9 +13,12 @@ export default async function Home() {
   const authProvider = await getServerAuthProvider();
   logger.debug('[HomePage] Auth provider:', authProvider);
 
-  // For local/OSS provider, check if user has workflows
-  if (authProvider === 'local') {
-    logger.debug('[HomePage] Local provider detected, checking for workflows');
+  // For local/OSS provider and Clerk, check if user has workflows. Both
+  // resolve an access token the same way (getServerAccessToken), so an
+  // authenticated user is routed by workflow count and an unauthenticated
+  // one goes to /auth/login — mirroring /after-sign-in's fallback logic.
+  if (authProvider === 'local' || authProvider === 'clerk') {
+    logger.debug('[HomePage] Local/Clerk provider detected, checking for workflows');
 
     try {
       const accessToken = await getServerAccessToken();

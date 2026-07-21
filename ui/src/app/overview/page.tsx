@@ -2,14 +2,18 @@
 
 import Link from 'next/link';
 
+import { MinutesRemainingCard } from '@/components/billing/MinutesRemainingCard';
 import { GitHubStarBadge } from '@/components/layout/GitHubStarBadge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useAppConfig } from '@/context/AppConfigContext';
 import { useAuth } from '@/lib/auth';
 
 export default function OverviewPage() {
     const { user, provider } = useAuth();
+    const { config } = useAppConfig();
     const isOSSMode = provider !== 'stack';
+    const isSaasMode = config?.deploymentMode === 'saas';
 
     return (
         <div className="container mx-auto px-4 py-8">
@@ -42,6 +46,12 @@ export default function OverviewPage() {
                         )}
                     </CardContent>
                 </Card>
+
+                {isSaasMode && (
+                    <div className="mb-8">
+                        <MinutesRemainingCard />
+                    </div>
+                )}
 
                 {/* Quick Actions */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

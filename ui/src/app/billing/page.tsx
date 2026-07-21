@@ -16,6 +16,7 @@ import { toast } from "sonner";
 
 import { createMpsCreditPurchaseUrlApiV1OrganizationsUsageMpsCreditsPurchaseUrlPost, getBillingCreditsApiV1OrganizationsBillingCreditsGet } from "@/client/sdk.gen";
 import type { MpsBillingCreditsResponse, MpsCreditLedgerEntryResponse } from "@/client/types.gen";
+import { MinutesRemainingCard } from "@/components/billing/MinutesRemainingCard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -127,7 +128,10 @@ export default function BillingPage() {
 
     const isBillingV2 = credits?.billing_version === "v2";
     const isOssMode = config?.deploymentMode === "oss";
-    const canPurchaseCredits = isBillingV2 && !isOssMode;
+    const isSaasMode = config?.deploymentMode === "saas";
+    // Credit purchases (MPS checkout) are a self-hosted-only flow. In saas
+    // mode billing is platform-managed — no purchase UI, no MPS upsells.
+    const canPurchaseCredits = isBillingV2 && !isOssMode && !isSaasMode;
     const totalQuota = credits?.total_quota ?? 0;
     const remainingCredits = credits?.remaining_credits ?? 0;
     const usedCredits = credits?.total_credits_used ?? 0;
@@ -267,6 +271,8 @@ export default function BillingPage() {
                     )}
                 </div>
             </div>
+
+            {isSaasMode && <MinutesRemainingCard />}
 
             {isOssMode && (
                 <div className="flex gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-900/50 dark:bg-amber-950/30">

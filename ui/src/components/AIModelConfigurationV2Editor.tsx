@@ -18,6 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LANGUAGE_DISPLAY_NAMES } from "@/constants/languages";
+import { useAppConfig } from "@/context/AppConfigContext";
 
 type ModelMode = "realtime" | "dograh" | "byok";
 
@@ -258,6 +259,10 @@ export function AIModelConfigurationV2Editor({
     submitLabel = "Save Configuration",
 }: AIModelConfigurationV2EditorProps) {
     const defaultsForByok = useMemo(() => byokDefaults(defaults), [defaults]);
+    // In saas mode, keys are platform-managed — hide the Dograh service-key
+    // input while leaving voice/speed/language pickers fully visible.
+    const { config: appConfig } = useAppConfig();
+    const isSaasMode = appConfig?.deploymentMode === "saas";
     const [mode, setMode] = useState<ModelMode>("dograh");
     const [dograh, setDograh] = useState<DograhFormState>(() => ({
         api_key: "",
@@ -447,19 +452,21 @@ export function AIModelConfigurationV2Editor({
                                     </Select>
                                 </div>
 
-                                <div className="space-y-2 sm:col-span-2">
-                                    <Label htmlFor="dograh-api-key">API Key</Label>
-                                    <div className="relative">
-                                        <KeyRound className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                                        <Input
-                                            id="dograh-api-key"
-                                            className="pl-9"
-                                            value={dograh.api_key}
-                                            onChange={(event) => setDograh({ ...dograh, api_key: event.target.value })}
-                                            placeholder="Enter API key"
-                                        />
+                                {!isSaasMode && (
+                                    <div className="space-y-2 sm:col-span-2">
+                                        <Label htmlFor="dograh-api-key">API Key</Label>
+                                        <div className="relative">
+                                            <KeyRound className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                                            <Input
+                                                id="dograh-api-key"
+                                                className="pl-9"
+                                                value={dograh.api_key}
+                                                onChange={(event) => setDograh({ ...dograh, api_key: event.target.value })}
+                                                placeholder="Enter API key"
+                                            />
+                                        </div>
                                     </div>
-                                </div>
+                                )}
                             </div>
 
                             <Button type="button" className="mt-6 w-full" onClick={saveDograhConfiguration} disabled={isSavingDograh}>
