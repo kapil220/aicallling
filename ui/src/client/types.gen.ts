@@ -3234,6 +3234,36 @@ export type LastCampaignSettingsResponse = {
 };
 
 /**
+ * LedgerEntryResponse
+ */
+export type LedgerEntryResponse = {
+    /**
+     * Id
+     */
+    id: number;
+    /**
+     * Created At
+     */
+    created_at?: string | null;
+    /**
+     * Amount Cents
+     */
+    amount_cents: number;
+    /**
+     * Type
+     */
+    type: string;
+    /**
+     * Description
+     */
+    description?: string | null;
+    /**
+     * Workflow Run Id
+     */
+    workflow_run_id?: number | null;
+};
+
+/**
  * LoginRequest
  */
 export type LoginRequest = {
@@ -8419,6 +8449,52 @@ export type GetBalanceApiV1BillingBalanceGetResponses = {
 };
 
 export type GetBalanceApiV1BillingBalanceGetResponse = GetBalanceApiV1BillingBalanceGetResponses[keyof GetBalanceApiV1BillingBalanceGetResponses];
+
+export type GetLedgerApiV1BillingLedgerGetData = {
+    body?: never;
+    headers?: {
+        /**
+         * Authorization
+         */
+        authorization?: string | null;
+        /**
+         * X-Api-Key
+         */
+        'X-API-Key'?: string | null;
+    };
+    path?: never;
+    query?: {
+        /**
+         * Limit
+         */
+        limit?: number;
+    };
+    url: '/api/v1/billing/ledger';
+};
+
+export type GetLedgerApiV1BillingLedgerGetErrors = {
+    /**
+     * Not found
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetLedgerApiV1BillingLedgerGetError = GetLedgerApiV1BillingLedgerGetErrors[keyof GetLedgerApiV1BillingLedgerGetErrors];
+
+export type GetLedgerApiV1BillingLedgerGetResponses = {
+    /**
+     * Response Get Ledger Api V1 Billing Ledger Get
+     *
+     * Successful Response
+     */
+    200: Array<LedgerEntryResponse>;
+};
+
+export type GetLedgerApiV1BillingLedgerGetResponse = GetLedgerApiV1BillingLedgerGetResponses[keyof GetLedgerApiV1BillingLedgerGetResponses];
 
 export type StripeWebhookApiV1WebhooksStripePostData = {
     body?: never;
