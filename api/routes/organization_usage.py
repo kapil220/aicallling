@@ -7,7 +7,7 @@ from fastapi.responses import StreamingResponse
 from loguru import logger
 from pydantic import BaseModel, Field
 
-from api.constants import DEPLOYMENT_MODE, UI_APP_URL
+from api.constants import DEPLOYMENT_MODE, IS_SAAS_MODE, UI_APP_URL
 from api.db import db_client
 from api.db.models import UserModel
 from api.services.auth.depends import get_user, get_user_with_selected_organization
@@ -196,7 +196,13 @@ async def get_mps_credits(user: UserModel = Depends(get_user)):
 
     OSS users: queries by provider_id (created_by).
     Hosted users: queries by organization_id.
+
+    Not available in saas mode: saas has no MPS-hosted service keys/quota to
+    query — credit balance lives in the local ledger (see /billing/credits
+    and /billing/balance instead).
     """
+    if IS_SAAS_MODE:
+        raise HTTPException(status_code=404)
     try:
         if DEPLOYMENT_MODE == "oss":
             usage = await mps_service_key_client.get_usage_by_created_by(
@@ -259,6 +265,63 @@ async def _legacy_mps_credits_response(user: UserModel) -> MPSBillingCreditsResp
     )
 
 
+async def _local_billing_credits_response(
+    organization_id: int,
+    *,
+    page: int,
+    limit: int,
+) -> MPSBillingCreditsResponse:
+    """Serve the billing/credits shape from the local ledger (saas mode).
+
+    Saas mode has no MPS billing account, so this never calls MPS. The local
+    ledger client (``db_client.list_ledger_entries``) only supports a
+    ``limit``, not an offset, so — as the simplest correct option for the
+    phase-1 demo — this returns a single page of the most recent ``limit``
+    entries regardless of the requested ``page``. The UI's pager degrades
+    gracefully since ``total_pages`` is reported as 1.
+    """
+    from api.services.billing import billing_service
+
+    balance_cents = await billing_service.get_balance_cents(organization_id)
+    ledger = await db_client.list_ledger_entries(organization_id, limit=limit)
+
+    total_debits_cents = sum(
+        abs(entry.amount_cents) for entry in ledger if entry.amount_cents < 0
+    )
+    balance_credits = balance_cents / 100.0
+    total_debits_credits = total_debits_cents / 100.0
+
+    return MPSBillingCreditsResponse(
+        billing_version="v2",
+        total_credits_used=total_debits_credits,
+        remaining_credits=balance_credits,
+        total_quota=balance_credits + total_debits_credits,
+        account=MPSBillingAccountResponse(
+            id=organization_id,
+            organization_id=organization_id,
+            billing_mode="local",
+            cached_balance_credits=balance_credits,
+            currency="USD",
+        ),
+        ledger_entries=[
+            MPSCreditLedgerEntryResponse(
+                id=entry.id,
+                entry_type=entry.type,
+                origin="local",
+                credits_delta=entry.amount_cents / 100.0,
+                balance_after=entry.balance_after_cents / 100.0,
+                workflow_run_id=entry.workflow_run_id,
+                created_at=entry.created_at.isoformat() if entry.created_at else "",
+            )
+            for entry in ledger
+        ],
+        total_count=len(ledger),
+        page=1,
+        limit=limit,
+        total_pages=1,
+    )
+
+
 @router.get("/billing/credits", response_model=MPSBillingCreditsResponse)
 async def get_billing_credits(
     page: int = Query(1, ge=1),
@@ -267,6 +330,13 @@ async def get_billing_credits(
 ):
     """Return legacy MPS credits or paginated v2 billing ledger details for the org."""
     try:
+        if IS_SAAS_MODE:
+            if not user.selected_organization_id:
+                raise HTTPException(status_code=400, detail="No organization selected")
+            return await _local_billing_credits_response(
+                user.selected_organization_id, page=page, limit=limit
+            )
+
         if DEPLOYMENT_MODE == "oss" or not user.selected_organization_id:
             return await _legacy_mps_credits_response(user)
 
@@ -379,10 +449,10 @@ async def create_mps_credit_purchase_url(
     user: UserModel = Depends(get_user_with_selected_organization),
 ):
     """Create a checkout URL for organizations using Dograh-managed MPS v2."""
-    if DEPLOYMENT_MODE == "oss":
+    if DEPLOYMENT_MODE == "oss" or IS_SAAS_MODE:
         raise HTTPException(
             status_code=404,
-            detail="Credit purchases are not available in OSS mode",
+            detail="Credit purchases are not available in this deployment mode",
         )
 
     organization_id = user.selected_organization_id

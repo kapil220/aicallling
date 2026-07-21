@@ -86,3 +86,67 @@ async def test_balance_404_when_billing_engine_not_local(auth_client, monkeypatc
 
     resp = await client.get("/api/v1/billing/balance")
     assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_ledger_reflects_credit(auth_client):
+    """Ledger endpoint should list a credit entry after crediting the org."""
+    client, org_id = auth_client
+
+    await billing_service.credit(org_id, 500, "grant", description="demo credit")
+
+    resp = await client.get("/api/v1/billing/ledger")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data) == 1
+    entry = data[0]
+    assert entry["amount_cents"] == 500
+    assert entry["type"] == "grant"
+    assert entry["description"] == "demo credit"
+
+
+@pytest.mark.asyncio
+async def test_ledger_404_when_billing_engine_not_local(auth_client, monkeypatch):
+    """Ledger endpoint should return 404 when BILLING_ENGINE != 'local'."""
+    client, org_id = auth_client
+
+    from api.routes import billing_balance
+    monkeypatch.setattr(billing_balance, "BILLING_ENGINE", "mps")
+
+    resp = await client.get("/api/v1/billing/ledger")
+    assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_ledger_is_org_scoped(auth_client):
+    """An org's ledger entries must never leak into another org's listing."""
+    from api.app import app
+
+    client, org_id = auth_client
+
+    # Second organization via a fresh signup.
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as anon_client:
+        resp = await anon_client.post(
+            "/api/v1/auth/signup",
+            json={
+                "email": "test_balance_other_org@example.com",
+                "password": "SecurePassword123!",
+                "name": "Other Org User",
+            },
+        )
+        assert resp.status_code == 200
+        other_org_id = resp.json()["user"]["organization_id"]
+
+    await billing_service.credit(org_id, 700, "grant", description="org 1 credit")
+    await billing_service.credit(
+        other_org_id, 900, "grant", description="org 2 credit"
+    )
+
+    resp = await client.get("/api/v1/billing/ledger")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data) == 1
+    assert data[0]["description"] == "org 1 credit"
+    assert all(entry["description"] != "org 2 credit" for entry in data)
