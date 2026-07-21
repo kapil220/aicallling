@@ -66,7 +66,10 @@ async def invite_member(
         raise HTTPException(status_code=404, detail="user_not_found")
 
     org_id = user.selected_organization_id
-    await db_client.add_user_to_organization(target.id, org_id, role=body.role)
+    # Re-invites intentionally change an existing member's role.
+    await db_client.add_user_to_organization(
+        target.id, org_id, role=body.role, overwrite_role=True
+    )
 
     members = await db_client.list_org_members(org_id)
     row = next(m for m in members if m["user_id"] == target.id)
