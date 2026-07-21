@@ -11,9 +11,11 @@ import { useAppConfig } from '@/context/AppConfigContext';
 import { useAuth } from '@/lib/auth';
 
 export default function OverviewPage() {
-    const { user, provider } = useAuth();
+    const { user } = useAuth();
     const { config } = useAppConfig();
-    const isOSSMode = provider !== 'stack';
+    // `provider !== 'stack'` used to stand in for "OSS", but that wrongly
+    // includes 'clerk' (saas) as OSS too — use the deployment mode directly.
+    const isOSSMode = config?.deploymentMode === 'oss';
     const isSaasMode = config?.deploymentMode === 'saas';
 
     return (
