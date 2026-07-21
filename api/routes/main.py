@@ -7,6 +7,7 @@ from api.routes.auth import router as auth_router
 from api.routes.billing import router as billing_router
 from api.routes.billing_admin import router as billing_admin_router
 from api.routes.campaign import router as campaign_router
+from api.routes.clerk_webhooks import router as clerk_webhooks_router
 from api.routes.credentials import router as credentials_router
 from api.routes.folder import router as folder_router
 from api.routes.knowledge_base import router as knowledge_base_router
@@ -43,6 +44,7 @@ router.include_router(superuser_router)
 router.include_router(billing_admin_router)
 router.include_router(billing_router)
 router.include_router(webhooks_router)
+router.include_router(clerk_webhooks_router)
 router.include_router(workflow_router)
 router.include_router(workflow_text_chat_router)
 router.include_router(user_router)
