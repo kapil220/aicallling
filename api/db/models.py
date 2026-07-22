@@ -176,6 +176,13 @@ class OrganizationModel(Base):
     # single non-secret identifier looked up on nearly every billing request.
     stripe_customer_id = Column(String, unique=True, nullable=True, index=True)
 
+    # Phase 2 (saas): subscription plan linkage. Lifecycle states mirror
+    # Razorpay: None (never subscribed / trial) | active | halted | cancelled.
+    plan_id = Column(Integer, ForeignKey("plans.id", ondelete="SET NULL"), nullable=True)
+    razorpay_subscription_id = Column(String, unique=True, nullable=True, index=True)
+    subscription_status = Column(String, nullable=True)
+    current_period_end = Column(DateTime(timezone=True), nullable=True)
+
     # Relationships
     users = relationship(
         "UserModel",
@@ -291,6 +298,55 @@ class PricingRuleModel(Base):
     __table_args__ = (
         Index("ix_pricing_rules_org", "organization_id"),
         Index("ix_pricing_rules_active", "is_active"),
+    )
+
+
+class PlanModel(Base):
+    """Subscription plan catalog (saas mode). NULL limit columns mean unlimited."""
+
+    __tablename__ = "plans"
+
+    id = Column(Integer, primary_key=True)
+    tier_key = Column(String, nullable=False)
+    display_name = Column(String, nullable=False)
+    price_cents = Column(Integer, nullable=False)
+    currency = Column(String, nullable=False, default="inr", server_default="inr")
+    included_minutes = Column(Integer, nullable=False)
+    max_agents = Column(Integer, nullable=True)
+    max_concurrent_calls = Column(Integer, nullable=False, default=2, server_default="2")
+    daily_call_cap = Column(Integer, nullable=True)
+    max_active_campaigns = Column(Integer, nullable=True)
+    razorpay_plan_id = Column(String, nullable=True)
+    is_active = Column(Boolean, nullable=False, default=True, server_default=text("true"))
+    sort_order = Column(Integer, nullable=False, default=0, server_default="0")
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    __table_args__ = (
+        UniqueConstraint("tier_key", name="_plans_tier_key_uc"),
+        Index("ix_plans_active", "is_active"),
+    )
+
+
+class SubscriptionInvoiceModel(Base):
+    """One row per successful (or failed) Razorpay subscription charge."""
+
+    __tablename__ = "subscription_invoices"
+
+    id = Column(Integer, primary_key=True)
+    organization_id = Column(
+        Integer, ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False
+    )
+    razorpay_payment_id = Column(String, nullable=False)
+    razorpay_subscription_id = Column(String, nullable=True)
+    amount_cents = Column(Integer, nullable=False)
+    currency = Column(String, nullable=False, default="inr", server_default="inr")
+    status = Column(String, nullable=False, default="captured", server_default="captured")
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    __table_args__ = (
+        UniqueConstraint("razorpay_payment_id", name="_sub_invoice_payment_uc"),
+        Index("ix_subscription_invoices_org", "organization_id"),
     )
 
 
