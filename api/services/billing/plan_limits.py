@@ -38,6 +38,38 @@ def enforcement_enabled() -> bool:
     return IS_SAAS_MODE
 
 
+async def check_can_create_agent(organization_id: int) -> str | None:
+    """Returns an error message when the org is at its agent cap, else None."""
+    if not enforcement_enabled():
+        return None
+    limits = await get_org_limits(organization_id)
+    if limits.max_agents is None:
+        return None
+    counts = await db_client.get_workflow_counts(organization_id=organization_id)
+    if counts.get("active", 0) >= limits.max_agents:
+        return (
+            f"agent_limit_reached: your plan allows {limits.max_agents} active "
+            f"agents. {UPGRADE_PROMPT}"
+        )
+    return None
+
+
+async def check_can_start_campaign(organization_id: int) -> str | None:
+    """Returns an error message when the org is at its active-campaign cap."""
+    if not enforcement_enabled():
+        return None
+    limits = await get_org_limits(organization_id)
+    if limits.max_active_campaigns is None:
+        return None
+    active = await db_client.count_active_campaigns(organization_id)
+    if active >= limits.max_active_campaigns:
+        return (
+            f"campaign_limit_reached: your plan allows {limits.max_active_campaigns} "
+            f"active campaigns. {UPGRADE_PROMPT}"
+        )
+    return None
+
+
 async def get_org_limits(organization_id: int) -> PlanLimits:
     org = await db_client.get_organization_by_id(organization_id)
     if org is None or org.plan_id is None:

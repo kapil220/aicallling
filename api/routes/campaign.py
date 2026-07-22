@@ -15,6 +15,7 @@ from api.db import db_client
 from api.db.models import UserModel
 from api.enums import OrganizationConfigurationKey
 from api.services.auth.depends import get_user
+from api.services.billing import plan_limits
 from api.services.campaign.runner import campaign_runner_service
 from api.services.campaign.source_sync import CampaignSourceSyncService
 from api.services.campaign.source_sync_factory import get_sync_service
@@ -548,6 +549,12 @@ async def start_campaign(
     if not campaign:
         raise HTTPException(status_code=404, detail="Campaign not found")
 
+    limit_error = await plan_limits.check_can_start_campaign(
+        user.selected_organization_id
+    )
+    if limit_error:
+        raise HTTPException(status_code=402, detail=limit_error)
+
     # Check Dograh quota before starting campaign (apply per-workflow
     # model_overrides so we evaluate the keys this campaign will use).
     quota_result = await authorize_workflow_run_start(
@@ -872,6 +879,12 @@ async def resume_campaign(
     campaign = await db_client.get_campaign(campaign_id, user.selected_organization_id)
     if not campaign:
         raise HTTPException(status_code=404, detail="Campaign not found")
+
+    limit_error = await plan_limits.check_can_start_campaign(
+        user.selected_organization_id
+    )
+    if limit_error:
+        raise HTTPException(status_code=402, detail=limit_error)
 
     # Check Dograh quota before resuming campaign (apply per-workflow
     # model_overrides so we evaluate the keys this campaign will use).
