@@ -321,6 +321,26 @@ async def _authorize_oss_managed_v2_correlation(
     return QuotaCheckResult(has_quota=True)
 
 
+SUBSCRIPTION_INACTIVE_MESSAGE = (
+    "Your subscription is past due or cancelled. "
+    "Reactivate it at /billing to resume calling."
+)
+
+
+async def _check_subscription_state(organization_id: int) -> QuotaCheckResult | None:
+    """Saas-only: halted/cancelled subscriptions block new calls (spec §4)."""
+    if not plan_limits.enforcement_enabled():
+        return None
+    org = await db_client.get_organization_by_id(organization_id)
+    if org is not None and org.subscription_status in ("halted", "cancelled"):
+        return QuotaCheckResult(
+            has_quota=False,
+            error_message=SUBSCRIPTION_INACTIVE_MESSAGE,
+            error_code="subscription_inactive",
+        )
+    return None
+
+
 async def _authorize_local_billing(
     *,
     organization_id: int,
@@ -333,6 +353,10 @@ async def _authorize_local_billing(
     post-call settle uses the same price even if pricing rules change mid-call, and
     so the pipeline can cap call duration to the affordable seconds.
     """
+    blocked = await _check_subscription_state(organization_id)
+    if blocked is not None:
+        return blocked
+
     cap_error = await plan_limits.check_daily_call_cap(organization_id)
     if cap_error:
         return QuotaCheckResult(
