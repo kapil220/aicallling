@@ -58,7 +58,9 @@ def resolve_rate(
         best = max(candidates, key=lambda r: (_specificity(r), r.priority, r.id))
         return RateResult(int(best.price_per_minute_cents), best.id, "rule")
     if org_price_per_second_usd:
-        return RateResult(round(org_price_per_second_usd * 60 * 100), None, "org_fallback")
+        return RateResult(
+            round(org_price_per_second_usd * 60 * 100), None, "org_fallback"
+        )
     if global_default_cents is not None:
         return RateResult(int(global_default_cents), None, "global_default")
     return RateResult(0, None, "none")

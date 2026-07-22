@@ -9,7 +9,8 @@ from api.services.campaign.writeback.sheets_writeback import (
 
 def _run(**overrides):
     base = dict(
-        id=42, state="completed",
+        id=42,
+        state="completed",
         usage_info={"call_duration_seconds": 87.4},
         cost_info={"total_cost_usd": 0.42},
         recording_url="https://cdn/run42.wav",
@@ -32,11 +33,15 @@ def test_resolve_field_call_state():
 
 
 def test_resolve_field_duration_nested_path():
-    assert resolve_field("usage_info.call_duration_seconds", _run(), _workflow()) == "87.4"
+    assert (
+        resolve_field("usage_info.call_duration_seconds", _run(), _workflow()) == "87.4"
+    )
 
 
 def test_resolve_field_gathered_context_nested_path():
-    assert resolve_field("gathered_context.customer_intent", _run(), _workflow()) == "buy"
+    assert (
+        resolve_field("gathered_context.customer_intent", _run(), _workflow()) == "buy"
+    )
 
 
 def test_resolve_field_missing_path_returns_blank():
@@ -68,8 +73,16 @@ def test_resolve_disposition_blank_when_absent():
 
 
 def test_build_row_values_applies_full_mapping():
-    mapping = {"F": "call_disposition", "G": "usage_info.call_duration_seconds",
-               "H": "recording_url", "I": "gathered_context.customer_intent"}
+    mapping = {
+        "F": "call_disposition",
+        "G": "usage_info.call_duration_seconds",
+        "H": "recording_url",
+        "I": "gathered_context.customer_intent",
+    }
     row = build_row_values(mapping, _run(), _workflow())
-    assert row == {"F": "No Answer (auto)", "G": "87.4",
-                   "H": "https://cdn/run42.wav", "I": "buy"}
+    assert row == {
+        "F": "No Answer (auto)",
+        "G": "87.4",
+        "H": "https://cdn/run42.wav",
+        "I": "buy",
+    }

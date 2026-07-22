@@ -850,3 +850,16 @@ class CampaignClient(BaseDBClient):
                 await session.refresh(run)
 
             return claimed_runs
+
+    async def count_active_campaigns(self, organization_id: int) -> int:
+        """Campaigns currently holding an active-campaign plan slot (saas phase 2)."""
+        async with self.async_session() as session:
+            result = await session.execute(
+                select(func.count())
+                .select_from(CampaignModel)
+                .where(
+                    CampaignModel.organization_id == organization_id,
+                    CampaignModel.state.in_(["syncing", "running"]),
+                )
+            )
+            return int(result.scalar_one())

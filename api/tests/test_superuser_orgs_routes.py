@@ -1,4 +1,5 @@
 """Requires pgvector Postgres (docker-compose-local)."""
+
 import pytest
 from httpx import ASGITransport, AsyncClient
 

@@ -6,12 +6,16 @@ Returns 200 once an event is durably processed or is a no-op duplicate; returns
 500 on ``RefundTooEarlyError`` so Stripe retries later.
 """
 
+import hashlib
+import json
+
 import stripe
 from fastapi import APIRouter, HTTPException, Request
 from loguru import logger
 
 from api.constants import BILLING_PAYMENTS_ENABLED, STRIPE_WEBHOOK_SECRET
-from api.services.billing import payment_service
+from api.services.billing import payment_service, subscription_service
+from api.services.billing.providers.razorpay_provider import get_provider
 
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 
@@ -47,4 +51,28 @@ async def stripe_webhook(request: Request):
     else:
         logger.debug("Ignoring unhandled Stripe event type: {}", event_type)
 
+    return {"received": True}
+
+
+@router.post("/razorpay")
+async def razorpay_webhook(request: Request):
+    """Razorpay subscription lifecycle webhook (saas phase 2).
+
+    Signature-verified on the raw body (HMAC-SHA256, X-Razorpay-Signature).
+    Ledger idempotency keys make replays no-ops.
+    """
+    if not BILLING_PAYMENTS_ENABLED:
+        raise HTTPException(status_code=404, detail="payments_not_enabled")
+
+    body = await request.body()
+    signature = request.headers.get("X-Razorpay-Signature", "")
+    if not get_provider().verify_webhook_signature(body, signature):
+        logger.warning("Rejected Razorpay webhook with bad signature")
+        raise HTTPException(status_code=400, detail="invalid_signature")
+
+    event = json.loads(body)
+    event_id = request.headers.get(
+        "X-Razorpay-Event-Id", hashlib.sha256(body).hexdigest()[:32]
+    )
+    await subscription_service.handle_event(event, event_id)
     return {"received": True}

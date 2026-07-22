@@ -5,7 +5,7 @@ These endpoints let an operator seed and inspect the local billing engine's stat
 end-to-end. All routes require the platform superuser.
 """
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from api.db import db_client
@@ -112,6 +112,92 @@ async def create_payment_pack(body: PaymentPackRequest, user=Depends(get_superus
         await session.commit()
         await session.refresh(pack)
     return {"id": pack.id, "pack_key": pack.pack_key}
+
+
+class PlanRequest(BaseModel):
+    tier_key: str
+    display_name: str
+    price_cents: int
+    currency: str = "inr"
+    included_minutes: int
+    max_agents: int | None = None
+    max_concurrent_calls: int = 2
+    daily_call_cap: int | None = None
+    max_active_campaigns: int | None = None
+    razorpay_plan_id: str | None = None
+    is_active: bool = True
+    sort_order: int = 0
+
+
+class PlanUpdateRequest(BaseModel):
+    display_name: str | None = None
+    price_cents: int | None = None
+    currency: str | None = None
+    included_minutes: int | None = None
+    max_agents: int | None = None
+    max_concurrent_calls: int | None = None
+    daily_call_cap: int | None = None
+    max_active_campaigns: int | None = None
+    razorpay_plan_id: str | None = None
+    is_active: bool | None = None
+    sort_order: int | None = None
+
+
+class PlanAdminResponse(BaseModel):
+    id: int
+    tier_key: str
+    display_name: str
+    price_cents: int
+    currency: str
+    included_minutes: int
+    max_agents: int | None
+    max_concurrent_calls: int
+    daily_call_cap: int | None
+    max_active_campaigns: int | None
+    razorpay_plan_id: str | None
+    is_active: bool
+    sort_order: int
+
+
+def _plan_admin_response(plan) -> PlanAdminResponse:
+    return PlanAdminResponse(
+        id=plan.id,
+        tier_key=plan.tier_key,
+        display_name=plan.display_name,
+        price_cents=plan.price_cents,
+        currency=plan.currency,
+        included_minutes=plan.included_minutes,
+        max_agents=plan.max_agents,
+        max_concurrent_calls=plan.max_concurrent_calls,
+        daily_call_cap=plan.daily_call_cap,
+        max_active_campaigns=plan.max_active_campaigns,
+        razorpay_plan_id=plan.razorpay_plan_id,
+        is_active=plan.is_active,
+        sort_order=plan.sort_order,
+    )
+
+
+@router.get("/plans", response_model=list[PlanAdminResponse])
+async def list_plans_admin(user=Depends(get_superuser)):
+    """Subscription plan catalog management (saas phase 2)."""
+    return [_plan_admin_response(p) for p in await db_client.list_all_plans()]
+
+
+@router.post("/plans", response_model=PlanAdminResponse)
+async def create_plan_admin(body: PlanRequest, user=Depends(get_superuser)):
+    plan = await db_client.create_plan(**body.model_dump())
+    return _plan_admin_response(plan)
+
+
+@router.patch("/plans/{plan_id}", response_model=PlanAdminResponse)
+async def update_plan_admin(
+    plan_id: int, body: PlanUpdateRequest, user=Depends(get_superuser)
+):
+    fields = body.model_dump(exclude_unset=True)
+    plan = await db_client.update_plan(plan_id, **fields)
+    if plan is None:
+        raise HTTPException(status_code=404, detail="plan_not_found")
+    return _plan_admin_response(plan)
 
 
 @router.get("/payment-packs")

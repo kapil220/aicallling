@@ -287,6 +287,70 @@ For local development, Clerk webhooks cannot reach `http://localhost:8000` from 
 
 Once deployed to a real domain, webhooks will work automatically.
 
+## Step 5: Razorpay Billing (Phase 2)
+
+Subscription plans are sold through Razorpay Subscriptions. Payments stay off
+until `BILLING_PAYMENTS_ENABLED=true`, so you can run the platform on trial
+minutes alone and enable billing later.
+
+### Environment Variables
+
+Add to `api/.env`:
+
+```bash
+BILLING_PAYMENTS_ENABLED=true
+RAZORPAY_KEY_ID=rzp_test_...
+RAZORPAY_KEY_SECRET=...
+RAZORPAY_WEBHOOK_SECRET=...
+```
+
+When `BILLING_PAYMENTS_ENABLED=true`, saas boot validation refuses to start
+unless all three Razorpay variables are set.
+
+### Create Plans in Razorpay
+
+The database ships with three seeded tiers (`starter`, `pro`, `scale` — see
+`GET /api/v1/superuser/plans`). For each tier:
+
+1. In the Razorpay dashboard (test mode first), go to **Subscriptions** >
+   **Plans** > **Create Plan**: monthly billing, INR, amount matching the
+   tier's `price_cents` (e.g. Starter ₹1,499).
+2. Link the Razorpay plan id to the tier:
+   ```bash
+   curl -X PATCH http://localhost:8000/api/v1/superuser/plans/<plan_id> \
+     -H "Authorization: Bearer <superuser_token>" \
+     -H "Content-Type: application/json" \
+     -d '{"razorpay_plan_id": "plan_XXXXXXXX"}'
+   ```
+
+A tier without a `razorpay_plan_id` returns `409 plan_not_purchasable` at
+checkout, so nothing is sellable until you link it. Prices, included minutes,
+and limits are tunable via the same superadmin endpoint.
+
+### Configure the Webhook
+
+In Razorpay dashboard > **Settings** > **Webhooks**, add
+`https://<your-host>/api/v1/webhooks/razorpay` with the secret from
+`RAZORPAY_WEBHOOK_SECRET` and these events:
+
+- `subscription.activated`
+- `subscription.charged`
+- `subscription.halted`
+- `subscription.cancelled`
+- `payment.failed`
+
+Every `subscription.charged` expires the previous period's remaining balance
+and grants the new period's minutes (no rollover); replayed events are no-ops
+via ledger idempotency keys.
+
+### Trial Limits
+
+Orgs without an active plan run under trial limits, tunable via env:
+`TRIAL_MAX_AGENTS` (3), `TRIAL_MAX_CONCURRENT_CALLS` (2),
+`TRIAL_DAILY_CALL_CAP` (20), `TRIAL_MAX_ACTIVE_CAMPAIGNS` (1). Plan tiers set
+these per subscription; `halted`/`cancelled` subscriptions block new calls
+while keeping agents editable.
+
 ## Troubleshooting
 
 ### Backend Won't Start: SaaS Config Validation Fails

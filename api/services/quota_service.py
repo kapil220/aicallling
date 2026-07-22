@@ -12,7 +12,7 @@ from loguru import logger
 from api.constants import BILLING_ENGINE, BILLING_LOCAL, DEPLOYMENT_MODE
 from api.db import db_client
 from api.db.models import UserModel
-from api.services.billing import billing_service
+from api.services.billing import billing_service, plan_limits
 from api.services.configuration.ai_model_configuration import (
     get_effective_ai_model_configuration_for_workflow,
 )
@@ -321,6 +321,26 @@ async def _authorize_oss_managed_v2_correlation(
     return QuotaCheckResult(has_quota=True)
 
 
+SUBSCRIPTION_INACTIVE_MESSAGE = (
+    "Your subscription is past due or cancelled. "
+    "Reactivate it at /billing to resume calling."
+)
+
+
+async def _check_subscription_state(organization_id: int) -> QuotaCheckResult | None:
+    """Saas-only: halted/cancelled subscriptions block new calls (spec §4)."""
+    if not plan_limits.enforcement_enabled():
+        return None
+    org = await db_client.get_organization_by_id(organization_id)
+    if org is not None and org.subscription_status in ("halted", "cancelled"):
+        return QuotaCheckResult(
+            has_quota=False,
+            error_message=SUBSCRIPTION_INACTIVE_MESSAGE,
+            error_code="subscription_inactive",
+        )
+    return None
+
+
 async def _authorize_local_billing(
     *,
     organization_id: int,
@@ -333,6 +353,18 @@ async def _authorize_local_billing(
     post-call settle uses the same price even if pricing rules change mid-call, and
     so the pipeline can cap call duration to the affordable seconds.
     """
+    blocked = await _check_subscription_state(organization_id)
+    if blocked is not None:
+        return blocked
+
+    cap_error = await plan_limits.check_daily_call_cap(organization_id)
+    if cap_error:
+        return QuotaCheckResult(
+            has_quota=False,
+            error_message=cap_error,
+            error_code="daily_call_cap_reached",
+        )
+
     rate = await billing_service.resolve_rate_for(organization_id, user_config)
     if not await billing_service.authorize(organization_id, rate):
         return _insufficient_billing_v2_quota_result()

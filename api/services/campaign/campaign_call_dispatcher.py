@@ -5,7 +5,12 @@ from typing import TYPE_CHECKING, Optional
 
 from loguru import logger
 
-from api.constants import DEFAULT_ORG_CONCURRENCY_LIMIT
+from api.constants import (
+    BILLING_ENGINE,
+    BILLING_LOCAL,
+    DEFAULT_ORG_CONCURRENCY_LIMIT,
+    MINIMUM_CREDIT_CENTS,
+)
 from api.db import db_client
 from api.db.models import QueuedRunModel, WorkflowRunModel
 from api.enums import OrganizationConfigurationKey, WorkflowRunState
@@ -14,6 +19,7 @@ from api.services.campaign.errors import (
     ConcurrentSlotAcquisitionError,
     PhoneNumberPoolExhaustedError,
 )
+from api.services.billing import billing_service, plan_limits
 from api.services.campaign.rate_limiter import rate_limiter
 from api.services.quota_service import authorize_workflow_run_start
 from api.utils.common import get_backend_endpoints
@@ -59,12 +65,48 @@ class CampaignCallDispatcher:
                 OrganizationConfigurationKey.CONCURRENT_CALL_LIMIT.value,
             )
             if config and config.value:
-                return int(config.value["value"])
+                configured = int(config.value["value"])
+            else:
+                configured = self.default_concurrent_limit
         except Exception as e:
             logger.warning(
                 f"Error getting concurrent limit for org {organization_id}: {e}"
             )
-        return self.default_concurrent_limit
+            configured = self.default_concurrent_limit
+        if plan_limits.enforcement_enabled():
+            limits = await plan_limits.get_org_limits(organization_id)
+            return min(configured, limits.max_concurrent_calls)
+        return configured
+
+    async def _plan_pause_reason(self, organization_id: int) -> Optional[str]:
+        """Reason this org's campaigns must pause under its plan, else None."""
+        if not plan_limits.enforcement_enabled():
+            return None
+        cap_error = await plan_limits.check_daily_call_cap(organization_id)
+        if cap_error:
+            return cap_error
+        if BILLING_ENGINE == BILLING_LOCAL:
+            balance = await billing_service.get_balance_cents(organization_id)
+            if balance < MINIMUM_CREDIT_CENTS:
+                return (
+                    "minutes_exhausted: your plan minutes are used up. "
+                    + plan_limits.UPGRADE_PROMPT
+                )
+        return None
+
+    async def _pause_campaign_for_plan(self, campaign_id: int, reason: str) -> None:
+        from api.services.campaign.runner import campaign_runner_service
+
+        try:
+            await campaign_runner_service.pause_campaign(campaign_id)
+        except Exception as e:
+            logger.warning(f"Could not pause campaign {campaign_id}: {e}")
+        await db_client.append_campaign_log(
+            campaign_id=campaign_id,
+            level="warning",
+            event="plan_limit_pause",
+            message=reason,
+        )
 
     async def process_batch(self, campaign_id: int, batch_size: int = 10) -> int:
         """
@@ -82,6 +124,13 @@ class CampaignCallDispatcher:
             logger.info(
                 f"Campaign {campaign_id} is not in running state: {campaign.state}"
             )
+            return 0
+
+        # Saas plan guards: pause (not fail) the campaign when the org can't
+        # dispatch — daily call cap reached or plan minutes exhausted.
+        pause_reason = await self._plan_pause_reason(campaign.organization_id)
+        if pause_reason:
+            await self._pause_campaign_for_plan(campaign_id, pause_reason)
             return 0
 
         # Atomically claim queued runs for processing (thread-safe)

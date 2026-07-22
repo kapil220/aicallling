@@ -34,11 +34,7 @@ async def clerk_webhook(request: Request) -> Response:
             email = None
         else:
             email = next(
-                (
-                    e.get("email_address")
-                    for e in emails
-                    if e.get("id") == primary_id
-                ),
+                (e.get("email_address") for e in emails if e.get("id") == primary_id),
                 None,
             )
         user = await db_client.get_user_by_provider_id(provider_id)
@@ -53,9 +49,7 @@ async def clerk_webhook(request: Request) -> Response:
         # `user.selected_organization_id` — that may point at a shared org the
         # deleted user doesn't own, and archiving its keys would break other
         # members.
-        own_org = await db_client.get_organization_by_provider_id(
-            f"org_{provider_id}"
-        )
+        own_org = await db_client.get_organization_by_provider_id(f"org_{provider_id}")
         if own_org:
             keys = await db_client.get_api_keys_by_organization(own_org.id)
             for key in keys:
