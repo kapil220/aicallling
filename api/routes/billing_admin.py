@@ -214,3 +214,35 @@ async def list_payment_packs(user=Depends(get_superuser)):
         }
         for p in packs
     ]
+
+
+class PlatformNumberAdminResponse(BaseModel):
+    id: int
+    organization_id: int
+    address: str
+    country_code: str | None
+    rental_cents: int | None
+    next_renewal_at: str | None
+    rental_status: str | None
+    is_active: bool
+
+
+@router.get("/platform-numbers", response_model=list[PlatformNumberAdminResponse])
+async def list_platform_numbers_admin(user=Depends(get_superuser)):
+    """All platform-provisioned numbers across orgs (spec §8 oversight)."""
+    rows = await db_client.list_all_platform_numbers()
+    return [
+        PlatformNumberAdminResponse(
+            id=row.id,
+            organization_id=org_id,
+            address=row.address,
+            country_code=row.country_code,
+            rental_cents=row.rental_cents,
+            next_renewal_at=(
+                row.next_renewal_at.isoformat() if row.next_renewal_at else None
+            ),
+            rental_status=row.rental_status,
+            is_active=row.is_active,
+        )
+        for row, org_id in rows
+    ]

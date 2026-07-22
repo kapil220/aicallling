@@ -6,6 +6,7 @@ from api.routes.agent_stream import router as agent_stream_router
 from api.routes.auth import router as auth_router
 from api.routes.billing import router as billing_router
 from api.routes.billing_admin import router as billing_admin_router
+from api.routes.platform_numbers import router as platform_numbers_router
 from api.routes.billing_balance import router as billing_balance_router
 from api.routes.campaign import router as campaign_router
 from api.routes.clerk_webhooks import router as clerk_webhooks_router
@@ -46,6 +47,7 @@ router.include_router(superuser_router)
 router.include_router(billing_admin_router)
 router.include_router(billing_router)
 router.include_router(billing_balance_router)
+router.include_router(platform_numbers_router)
 router.include_router(webhooks_router)
 router.include_router(clerk_webhooks_router)
 router.include_router(workflow_router)
