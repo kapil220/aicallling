@@ -15,6 +15,7 @@ import {
   Home,
   Key,
   LogOut,
+  Hash,
   type LucideIcon,
   Megaphone,
   Phone,
@@ -68,6 +69,7 @@ type SidebarNavItem = {
   url: string;
   icon: LucideIcon;
   showsTelephonyWarning?: boolean;
+  saasOnly?: boolean;
 };
 
 type SidebarNavSection = {
@@ -110,6 +112,12 @@ const NAV_SECTIONS: SidebarNavSection[] = [
         url: "/telephony-configurations",
         icon: Phone,
         showsTelephonyWarning: true,
+      },
+      {
+        title: "Phone Numbers",
+        url: "/phone-numbers",
+        icon: Hash,
+        saasOnly: true,
       },
       {
         title: "Tools",
@@ -428,11 +436,15 @@ export function AppSidebar() {
               </SidebarGroupLabel>
             )}
             <SidebarMenu>
-              {section.items.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarLink item={item} />
-                </SidebarMenuItem>
-              ))}
+              {section.items
+                .filter(
+                  (item) => !item.saasOnly || config?.deploymentMode === "saas",
+                )
+                .map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarLink item={item} />
+                  </SidebarMenuItem>
+                ))}
             </SidebarMenu>
           </SidebarGroup>
         ))}
