@@ -5,6 +5,7 @@ are untouched. A limit of None means unlimited.
 """
 
 from dataclasses import dataclass
+from datetime import datetime, timezone
 
 from api.constants import (
     IS_SAAS_MODE,
@@ -66,6 +67,26 @@ async def check_can_start_campaign(organization_id: int) -> str | None:
         return (
             f"campaign_limit_reached: your plan allows {limits.max_active_campaigns} "
             f"active campaigns. {UPGRADE_PROMPT}"
+        )
+    return None
+
+
+def _utc_midnight() -> datetime:
+    return datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+
+
+async def check_daily_call_cap(organization_id: int) -> str | None:
+    """Returns an error message when today's (UTC) runs are at the plan cap."""
+    if not enforcement_enabled():
+        return None
+    limits = await get_org_limits(organization_id)
+    if limits.daily_call_cap is None:
+        return None
+    used = await db_client.count_org_runs_since(organization_id, _utc_midnight())
+    if used >= limits.daily_call_cap:
+        return (
+            f"daily_call_cap_reached: your plan allows {limits.daily_call_cap} calls "
+            f"per day. {UPGRADE_PROMPT}"
         )
     return None
 

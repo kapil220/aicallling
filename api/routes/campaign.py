@@ -34,10 +34,15 @@ async def _get_org_concurrent_limit(organization_id: int) -> int:
             OrganizationConfigurationKey.CONCURRENT_CALL_LIMIT.value,
         )
         if config and config.value:
-            return int(config.value.get("value", DEFAULT_ORG_CONCURRENCY_LIMIT))
+            configured = int(config.value.get("value", DEFAULT_ORG_CONCURRENCY_LIMIT))
+        else:
+            configured = DEFAULT_ORG_CONCURRENCY_LIMIT
     except Exception:
-        pass
-    return DEFAULT_ORG_CONCURRENCY_LIMIT
+        configured = DEFAULT_ORG_CONCURRENCY_LIMIT
+    if plan_limits.enforcement_enabled():
+        limits = await plan_limits.get_org_limits(organization_id)
+        return min(configured, limits.max_concurrent_calls)
+    return configured
 
 
 async def _get_from_numbers_count(organization_id: int) -> int:
