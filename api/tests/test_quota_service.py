@@ -412,7 +412,9 @@ async def test_local_authorize_rejects_insufficient(monkeypatch):
         AsyncMock(return_value=object()),
     )
     monkeypatch.setattr(
-        qs.billing_service, "resolve_rate_for", AsyncMock(return_value=RateResult(100, 1, "rule"))
+        qs.billing_service,
+        "resolve_rate_for",
+        AsyncMock(return_value=RateResult(100, 1, "rule")),
     )
     monkeypatch.setattr(qs.billing_service, "authorize", AsyncMock(return_value=False))
 
@@ -433,24 +435,43 @@ async def test_local_authorize_accepts_and_stashes_rate(monkeypatch):
             return_value=type(
                 "W",
                 (),
-                {"id": 1, "organization_id": 9, "user_id": 2, "workflow_configurations": {}},
+                {
+                    "id": 1,
+                    "organization_id": 9,
+                    "user_id": 2,
+                    "workflow_configurations": {},
+                },
             )()
         ),
     )
     monkeypatch.setattr(
         qs.db_client,
         "get_user_by_id",
-        AsyncMock(return_value=type("U", (), {"id": 2, "provider_id": "p", "selected_organization_id": 9})()),
+        AsyncMock(
+            return_value=type(
+                "U", (), {"id": 2, "provider_id": "p", "selected_organization_id": 9}
+            )()
+        ),
     )
     monkeypatch.setattr(
-        qs, "get_effective_ai_model_configuration_for_workflow", AsyncMock(return_value=object())
+        qs,
+        "get_effective_ai_model_configuration_for_workflow",
+        AsyncMock(return_value=object()),
     )
     monkeypatch.setattr(
-        qs.billing_service, "resolve_rate_for", AsyncMock(return_value=RateResult(6000, 1, "rule"))
+        qs.billing_service,
+        "resolve_rate_for",
+        AsyncMock(return_value=RateResult(6000, 1, "rule")),
     )
     monkeypatch.setattr(qs.billing_service, "authorize", AsyncMock(return_value=True))
-    monkeypatch.setattr(qs.billing_service, "max_affordable_seconds", AsyncMock(return_value=42))
-    monkeypatch.setattr(qs.db_client, "get_workflow_run_by_id", AsyncMock(return_value=type("R", (), {"cost_info": {}})()))
+    monkeypatch.setattr(
+        qs.billing_service, "max_affordable_seconds", AsyncMock(return_value=42)
+    )
+    monkeypatch.setattr(
+        qs.db_client,
+        "get_workflow_run_by_id",
+        AsyncMock(return_value=type("R", (), {"cost_info": {}})()),
+    )
     update = AsyncMock()
     monkeypatch.setattr(qs.db_client, "update_workflow_run", update)
 

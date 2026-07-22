@@ -125,9 +125,7 @@ async def test_debit_clamps_at_zero(real_db):
 async def test_authorize_requires_one_minute_buffer(real_db):
     org_id = await real_db("org_bill_auth")
     await billing_service.credit(org_id, 50, "topup")
-    assert (
-        await billing_service.authorize(org_id, RateResult(100, 1, "rule")) is False
-    )
+    assert await billing_service.authorize(org_id, RateResult(100, 1, "rule")) is False
     await billing_service.credit(org_id, 60, "topup")  # now 110 >= 100
     assert await billing_service.authorize(org_id, RateResult(100, 1, "rule")) is True
 

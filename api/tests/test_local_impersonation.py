@@ -28,9 +28,7 @@ async def test_local_mode_impersonate_mints_jwt(monkeypatch):
     try:
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://t") as client:
-            r = await client.post(
-                "/api/v1/superuser/impersonate", json={"user_id": 42}
-            )
+            r = await client.post("/api/v1/superuser/impersonate", json={"user_id": 42})
         assert r.status_code == 200
         body = r.json()
         assert body["access_token"] == body["refresh_token"]

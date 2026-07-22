@@ -14,6 +14,7 @@ from api.services.billing import billing_service
 def local_billing(monkeypatch):
     """Ensure BILLING_ENGINE is set to 'local' for these tests."""
     from api.routes import billing_balance
+
     monkeypatch.setattr(billing_balance, "BILLING_ENGINE", "local")
 
 
@@ -82,6 +83,7 @@ async def test_balance_404_when_billing_engine_not_local(auth_client, monkeypatc
 
     # Monkeypatch BILLING_ENGINE in the route module
     from api.routes import billing_balance
+
     monkeypatch.setattr(billing_balance, "BILLING_ENGINE", "mps")
 
     resp = await client.get("/api/v1/billing/balance")
@@ -111,6 +113,7 @@ async def test_ledger_404_when_billing_engine_not_local(auth_client, monkeypatch
     client, org_id = auth_client
 
     from api.routes import billing_balance
+
     monkeypatch.setattr(billing_balance, "BILLING_ENGINE", "mps")
 
     resp = await client.get("/api/v1/billing/ledger")
@@ -140,9 +143,7 @@ async def test_ledger_is_org_scoped(auth_client):
         other_org_id = resp.json()["user"]["organization_id"]
 
     await billing_service.credit(org_id, 700, "grant", description="org 1 credit")
-    await billing_service.credit(
-        other_org_id, 900, "grant", description="org 2 credit"
-    )
+    await billing_service.credit(other_org_id, 900, "grant", description="org 2 credit")
 
     resp = await client.get("/api/v1/billing/ledger")
     assert resp.status_code == 200

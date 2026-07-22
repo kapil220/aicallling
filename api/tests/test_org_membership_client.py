@@ -62,9 +62,7 @@ async def real_db(setup_test_database):
                 )
             )
         if created_user_ids:
-            await s.execute(
-                delete(UserModel).where(UserModel.id.in_(created_user_ids))
-            )
+            await s.execute(delete(UserModel).where(UserModel.id.in_(created_user_ids)))
         await s.commit()
 
     db_client.engine = original_engine

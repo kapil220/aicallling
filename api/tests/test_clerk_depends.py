@@ -28,17 +28,13 @@ async def _call_get_user():
 
 
 @pytest.mark.asyncio
-async def test_first_login_provisions_user_org_trial_and_config(
-    clerk_mode, db_session
-):
+async def test_first_login_provisions_user_org_trial_and_config(clerk_mode, db_session):
     with (
         patch(
             "api.services.auth.depends.verify_clerk_token",
             AsyncMock(return_value=CLAIMS),
         ),
-        patch(
-            "api.services.auth.depends.grant_signup_trial", AsyncMock()
-        ) as trial,
+        patch("api.services.auth.depends.grant_signup_trial", AsyncMock()) as trial,
         patch(
             "api.services.auth.depends.seed_platform_model_configuration",
             AsyncMock(),

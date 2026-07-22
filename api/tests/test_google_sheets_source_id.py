@@ -9,7 +9,10 @@ from api.services.integrations.google.source_id import (
 
 
 def test_encode_with_range():
-    assert encode_sheet_source_id("1AbC", "Leads", "A1:F200") == "gsheet:1AbC:Leads:A1:F200"
+    assert (
+        encode_sheet_source_id("1AbC", "Leads", "A1:F200")
+        == "gsheet:1AbC:Leads:A1:F200"
+    )
 
 
 def test_encode_without_range():
@@ -17,11 +20,15 @@ def test_encode_without_range():
 
 
 def test_decode_round_trip_with_range():
-    assert decode_sheet_source_id("gsheet:1AbC:Leads:A1:F200") == SheetSourceRef("1AbC", "Leads", "A1:F200")
+    assert decode_sheet_source_id("gsheet:1AbC:Leads:A1:F200") == SheetSourceRef(
+        "1AbC", "Leads", "A1:F200"
+    )
 
 
 def test_decode_round_trip_without_range():
-    assert decode_sheet_source_id("gsheet:1AbC:Leads:") == SheetSourceRef("1AbC", "Leads", None)
+    assert decode_sheet_source_id("gsheet:1AbC:Leads:") == SheetSourceRef(
+        "1AbC", "Leads", None
+    )
 
 
 def test_decode_rejects_non_gsheet_prefix():

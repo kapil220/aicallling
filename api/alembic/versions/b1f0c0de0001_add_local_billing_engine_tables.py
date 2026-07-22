@@ -44,9 +44,7 @@ def upgrade() -> None:
         sa.Column("description", sa.String(), nullable=True),
         sa.Column("idempotency_key", sa.String(), nullable=True),
         sa.Column("created_by", sa.Integer(), nullable=True),
-        sa.Column(
-            "created_at", sa.DateTime(timezone=True), nullable=True
-        ),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=True),
         sa.ForeignKeyConstraint(
             ["organization_id"], ["organizations.id"], ondelete="CASCADE"
         ),
@@ -59,9 +57,7 @@ def upgrade() -> None:
             "organization_id", "idempotency_key", name="_credit_ledger_idem_uc"
         ),
     )
-    op.create_index(
-        "ix_credit_ledger_id", "credit_ledger", ["id"], unique=False
-    )
+    op.create_index("ix_credit_ledger_id", "credit_ledger", ["id"], unique=False)
     op.create_index(
         "ix_credit_ledger_org", "credit_ledger", ["organization_id"], unique=False
     )

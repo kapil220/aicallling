@@ -8,9 +8,9 @@ from api.db.integration_client import IntegrationClient
 from api.db.knowledge_base_client import KnowledgeBaseClient
 from api.db.org_membership_client import OrgMembershipClient
 from api.db.organization_client import OrganizationClient
-from api.db.payment_client import PaymentClient
 from api.db.organization_configuration_client import OrganizationConfigurationClient
 from api.db.organization_usage_client import OrganizationUsageClient
+from api.db.payment_client import PaymentClient
 from api.db.reports_client import ReportsClient
 from api.db.telephony_configuration_client import TelephonyConfigurationClient
 from api.db.telephony_phone_number_client import TelephonyPhoneNumberClient

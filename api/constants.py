@@ -71,9 +71,7 @@ BILLING_PAYMENTS_ENABLED = (
 
 # Google Sheets integration (Phase 5): leads-in campaign source + results write-back.
 # Off by default; requires a configured Google OAuth app to be useful.
-GOOGLE_SHEETS_ENABLED = (
-    os.getenv("GOOGLE_SHEETS_ENABLED", "false").lower() == "true"
-)
+GOOGLE_SHEETS_ENABLED = os.getenv("GOOGLE_SHEETS_ENABLED", "false").lower() == "true"
 GOOGLE_OAUTH_CLIENT_ID = os.getenv("GOOGLE_OAUTH_CLIENT_ID")
 GOOGLE_OAUTH_CLIENT_SECRET = os.getenv("GOOGLE_OAUTH_CLIENT_SECRET")
 

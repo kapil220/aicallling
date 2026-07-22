@@ -13,7 +13,6 @@ from sqlalchemy import (
     Index,
     Integer,
     String,
-    Table,
     Text,
     UniqueConstraint,
     and_,
@@ -49,9 +48,7 @@ class OrganizationUserModel(Base):
     __tablename__ = "organization_users"
 
     user_id = Column(Integer, ForeignKey("users.id"), primary_key=True)
-    organization_id = Column(
-        Integer, ForeignKey("organizations.id"), primary_key=True
-    )
+    organization_id = Column(Integer, ForeignKey("organizations.id"), primary_key=True)
     role = Column(
         Enum("admin", "member", name="org_role"),
         nullable=False,
@@ -340,9 +337,7 @@ class PaymentModel(Base):
     payment_pack_id = Column(
         Integer, ForeignKey("payment_packs.id", ondelete="SET NULL"), nullable=True
     )
-    stripe_checkout_session_id = Column(
-        String, unique=True, nullable=False, index=True
-    )
+    stripe_checkout_session_id = Column(String, unique=True, nullable=False, index=True)
     stripe_payment_intent_id = Column(String, unique=True, nullable=True, index=True)
     stripe_customer_id = Column(String, nullable=False, index=True)
     amount_cents_paid = Column(Integer, nullable=False)
