@@ -39,10 +39,13 @@ REDIS_SETTINGS = RedisSettings(
     ssl_check_hostname=False if use_ssl else None,
 )
 
+from arq import cron
+
 from api.tasks.campaign_tasks import (
     process_campaign_batch,
     sync_campaign_source,
 )
+from api.tasks.rental_billing import charge_number_rentals
 from api.tasks.knowledge_base_processing import process_knowledge_base_document
 from api.tasks.run_integrations import run_integrations_post_workflow_run
 from api.tasks.s3_upload import upload_voicemail_audio_to_s3
@@ -57,8 +60,10 @@ class WorkerSettings:
         sync_campaign_source,
         process_campaign_batch,
         process_knowledge_base_document,
+        charge_number_rentals,
     ]
-    cron_jobs = []
+    # Daily platform-number rental billing (saas phase 3); idempotent per day.
+    cron_jobs = [cron(charge_number_rentals, hour=2, minute=0)]
     redis_settings = REDIS_SETTINGS
     max_jobs = 10
 
