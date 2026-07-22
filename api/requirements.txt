@@ -20,5 +20,6 @@ posthog==7.19.1
 fastmcp==3.2.4
 tuner-pipecat-sdk==0.2.0
 PyNaCl==1.6.2
+razorpay
 stripe
 svix==1.45.1

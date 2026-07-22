@@ -76,6 +76,12 @@ BILLING_PAYMENTS_ENABLED = (
     os.getenv("BILLING_PAYMENTS_ENABLED", "false").lower() == "true"
 )
 
+# Razorpay (saas phase 2): subscription billing. Like Stripe above, only
+# meaningful with BILLING_ENGINE == "local".
+RAZORPAY_KEY_ID = os.getenv("RAZORPAY_KEY_ID")
+RAZORPAY_KEY_SECRET = os.getenv("RAZORPAY_KEY_SECRET")
+RAZORPAY_WEBHOOK_SECRET = os.getenv("RAZORPAY_WEBHOOK_SECRET")
+
 # Google Sheets integration (Phase 5): leads-in campaign source + results write-back.
 # Off by default; requires a configured Google OAuth app to be useful.
 GOOGLE_SHEETS_ENABLED = os.getenv("GOOGLE_SHEETS_ENABLED", "false").lower() == "true"
