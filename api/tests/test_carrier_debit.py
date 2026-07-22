@@ -30,6 +30,7 @@ async def real_db(setup_test_database):
     orig_engine, orig_maker = db_client.engine, db_client.async_session
     db_client.engine, db_client.async_session = engine, maker
     org_ids: list[int] = []
+    workflow_ids: list[int] = []
 
     async def make_org(balance_cents: int, platform_config: bool):
         async with maker() as s:
@@ -54,6 +55,7 @@ async def real_db(setup_test_database):
             s.add(run)
             await s.commit()
             await s.refresh(run)
+            workflow_ids.append(workflow.id)
         if platform_config:
             config = await db_client.create_platform_telephony_configuration(
                 org.id, {"account_sid": "AC_c", "auth_token": "t", "from_numbers": []}
@@ -68,7 +70,15 @@ async def real_db(setup_test_database):
         return org, config, run.id
 
     yield make_org
+    from api.db.models import WorkflowModel, WorkflowRunModel
+
     async with maker() as s:
+        await s.execute(
+            delete(WorkflowRunModel).where(
+                WorkflowRunModel.workflow_id.in_(workflow_ids)
+            )
+        )
+        await s.execute(delete(WorkflowModel).where(WorkflowModel.id.in_(workflow_ids)))
         await s.execute(
             delete(OrganizationModel).where(OrganizationModel.id.in_(org_ids))
         )
