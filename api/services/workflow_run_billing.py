@@ -10,7 +10,13 @@ from typing import Any
 
 from loguru import logger
 
-from api.constants import BILLING_ENGINE, BILLING_LOCAL, DEPLOYMENT_MODE
+from api.constants import (
+    BILLING_ENGINE,
+    BILLING_LOCAL,
+    DEPLOYMENT_MODE,
+    IS_SAAS_MODE,
+    PLATFORM_NUMBER_CARRIER_CENTS_PER_MINUTE,
+)
 from api.db import db_client
 from api.services.billing import billing_service
 from api.services.managed_model_services import get_mps_correlation_id
@@ -65,6 +71,37 @@ async def _debit_local_billing(workflow_run, organization_id: int) -> None:
         workflow_run_id=workflow_run.id,
         duration_seconds=float(duration),
         price_per_minute_cents=int(rate),
+    )
+    await _debit_carrier_if_platform(workflow_run, organization_id)
+
+
+async def _debit_carrier_if_platform(workflow_run, organization_id: int) -> None:
+    """Spec §8: platform-number calls burn extra carrier minutes on top of AI
+    minutes. Flat env-tunable rate; idempotent per run."""
+    if not IS_SAAS_MODE:
+        return
+    duration = _duration_seconds_from_usage_info(workflow_run)
+    if not duration:
+        return
+    config_id = (getattr(workflow_run, "initial_context", None) or {}).get(
+        "telephony_configuration_id"
+    )
+    if not config_id:
+        return
+    config = await db_client.get_telephony_configuration(int(config_id))
+    if config is None or not getattr(config, "is_platform", False):
+        return
+    carrier_cents = round(
+        float(duration) * PLATFORM_NUMBER_CARRIER_CENTS_PER_MINUTE / 60
+    )
+    if carrier_cents <= 0:
+        return
+    await billing_service.credit(
+        organization_id,
+        -carrier_cents,
+        "carrier_debit",
+        description=f"Carrier minutes for run {workflow_run.id}",
+        idempotency_key=f"carrier:{workflow_run.id}",
     )
 
 
