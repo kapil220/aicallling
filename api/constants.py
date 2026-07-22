@@ -45,6 +45,13 @@ CLERK_WEBHOOK_SECRET = os.getenv("CLERK_WEBHOOK_SECRET")
 # Free trial minutes granted once per newly provisioned organization (saas mode).
 TRIAL_MINUTES = int(os.getenv("TRIAL_MINUTES", "15"))
 
+# Phase 2 (saas): limits applied to orgs with no active plan (trial). NULL/unset
+# plan columns mean unlimited; these trial values are intentionally small.
+TRIAL_MAX_AGENTS = int(os.getenv("TRIAL_MAX_AGENTS", "3"))
+TRIAL_MAX_CONCURRENT_CALLS = int(os.getenv("TRIAL_MAX_CONCURRENT_CALLS", "2"))
+TRIAL_DAILY_CALL_CAP = int(os.getenv("TRIAL_DAILY_CALL_CAP", "20"))
+TRIAL_MAX_ACTIVE_CAMPAIGNS = int(os.getenv("TRIAL_MAX_ACTIVE_CAMPAIGNS", "1"))
+
 # Platform-held AI provider keys (saas mode): injected as org default model
 # configuration so tenants never handle provider keys.
 PLATFORM_OPENAI_API_KEY = os.getenv("PLATFORM_OPENAI_API_KEY")
