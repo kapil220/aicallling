@@ -24,12 +24,16 @@ def superuser_override():
 
 @pytest_asyncio.fixture
 async def cleanup_plans():
-    yield
-    from api.db.database import async_session
+    from api.db import db_client
 
-    async with async_session() as s:
-        await s.execute(delete(PlanModel).where(PlanModel.tier_key.like("t3_%")))
-        await s.commit()
+    async def _purge():
+        async with db_client.async_session() as s:
+            await s.execute(delete(PlanModel).where(PlanModel.tier_key.like("t3_%")))
+            await s.commit()
+
+    await _purge()
+    yield
+    await _purge()
 
 
 def _client():
