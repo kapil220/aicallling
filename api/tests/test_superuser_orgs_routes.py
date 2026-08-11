@@ -1,5 +1,7 @@
 """Requires pgvector Postgres (docker-compose-local)."""
 
+import uuid
+
 import pytest
 from httpx import ASGITransport, AsyncClient
 
@@ -24,11 +26,11 @@ async def _org_with_admin(balance_cents=0):
 
     async with async_session() as s:
         org = OrganizationModel(
-            provider_id=f"org_su_{id(object())}", credit_balance_cents=0
+            provider_id=f"org_su_{uuid.uuid4().hex}", credit_balance_cents=0
         )
         s.add(org)
         await s.flush()
-        admin = UserModel(provider_id=f"su_admin_{id(object())}")
+        admin = UserModel(provider_id=f"su_admin_{uuid.uuid4().hex}")
         s.add(admin)
         await s.flush()
         await s.commit()
@@ -73,7 +75,7 @@ async def test_role_override_repairs_zero_admin_org(superuser_override):
     from api.db.database import async_session
 
     async with async_session() as s:
-        u2 = UserModel(provider_id=f"su_member_{id(object())}")
+        u2 = UserModel(provider_id=f"su_member_{uuid.uuid4().hex}")
         s.add(u2)
         await s.commit()
         await s.refresh(u2)

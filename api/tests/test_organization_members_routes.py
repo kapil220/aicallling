@@ -1,6 +1,8 @@
 """Route tests for member management. Requires the pgvector Postgres
 (docker-compose-local) since they create real orgs/users."""
 
+import uuid
+
 import pytest
 from httpx import ASGITransport, AsyncClient
 
@@ -14,14 +16,14 @@ async def _make_org_with_members(roles: list[str]):
     from api.db.database import async_session
 
     async with async_session() as s:
-        org = OrganizationModel(provider_id=f"org_members_{id(object())}")
+        org = OrganizationModel(provider_id=f"org_members_{uuid.uuid4().hex}")
         s.add(org)
         await s.flush()
         users = []
         for i, _ in enumerate(roles):
             u = UserModel(
-                provider_id=f"member_user_{id(object())}_{i}",
-                email=f"user{i}_{id(object())}@example.com",
+                provider_id=f"member_user_{uuid.uuid4().hex}_{i}",
+                email=f"user{i}_{uuid.uuid4().hex}@example.com",
             )
             s.add(u)
             users.append(u)
