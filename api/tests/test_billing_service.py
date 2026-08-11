@@ -9,14 +9,20 @@ import pytest
 from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
-from api.db.models import OrganizationModel
+from api.db.models import OrganizationModel, WorkflowModel, WorkflowRunModel
+from api.enums import WorkflowRunMode
 from api.services.billing import billing_service
 from api.services.billing.pricing import RateResult
 
 
 @pytest.fixture(scope="module")
-async def real_db(setup_test_database):
-    """Patch db_client to a real committing session factory for this module."""
+async def _billing_db(setup_test_database):
+    """Patch db_client to a real committing session factory for this module.
+
+    Yields (make_org, make_run). Runs must be real rows: credit_ledger has an
+    FK on workflow_run_id, so debits against a made-up id fail on any DB that
+    doesn't happen to already hold that row.
+    """
     from api.db import db_client
 
     engine = create_async_engine(setup_test_database, echo=False)
@@ -28,6 +34,8 @@ async def real_db(setup_test_database):
     db_client.async_session = session_factory
 
     created_org_ids: list[int] = []
+    created_workflow_ids: list[int] = []
+    created_run_ids: list[int] = []
 
     async def make_org(provider_id: str, balance_cents: int = 0) -> int:
         async with session_factory() as session:
@@ -40,21 +48,68 @@ async def real_db(setup_test_database):
             created_org_ids.append(org.id)
             return org.id
 
-    yield make_org
+    async def make_run(organization_id: int) -> int:
+        """Create a workflow + run for `organization_id` and return the run id."""
+        async with session_factory() as session:
+            workflow = WorkflowModel(
+                name="billing-test-workflow", organization_id=organization_id
+            )
+            session.add(workflow)
+            await session.commit()
+            await session.refresh(workflow)
+            created_workflow_ids.append(workflow.id)
 
-    # Cleanup: cascade deletes ledger + pricing rows via FK ondelete=CASCADE.
+            run = WorkflowRunModel(
+                name="billing-test-run",
+                workflow_id=workflow.id,
+                mode=WorkflowRunMode.WEBRTC.value,
+            )
+            session.add(run)
+            await session.commit()
+            await session.refresh(run)
+            created_run_ids.append(run.id)
+            return run.id
+
+    yield make_org, make_run
+
+    # Cleanup order matters: runs before workflows (workflow_runs.workflow_id has
+    # no ON DELETE), workflows before orgs (workflows.organization_id likewise).
+    # Deleting a run nulls the ledger reference (ON DELETE SET NULL); deleting the
+    # org then cascades the remaining ledger + pricing rows.
     async with session_factory() as session:
+        if created_run_ids:
+            await session.execute(
+                delete(WorkflowRunModel).where(WorkflowRunModel.id.in_(created_run_ids))
+            )
+        if created_workflow_ids:
+            await session.execute(
+                delete(WorkflowModel).where(WorkflowModel.id.in_(created_workflow_ids))
+            )
         if created_org_ids:
             await session.execute(
                 delete(OrganizationModel).where(
                     OrganizationModel.id.in_(created_org_ids)
                 )
             )
-            await session.commit()
+        await session.commit()
 
     db_client.engine = original_engine
     db_client.async_session = original_session
     await engine.dispose()
+
+
+@pytest.fixture(scope="module")
+async def real_db(_billing_db):
+    """Factory for a committed organization: `await real_db("provider_id")`."""
+    make_org, _ = _billing_db
+    return make_org
+
+
+@pytest.fixture(scope="module")
+async def make_run(_billing_db):
+    """Factory for a committed workflow run: `await make_run(org_id)`."""
+    _, factory = _billing_db
+    return factory
 
 
 # --- Pure rounding logic (no DB) -------------------------------------------------
@@ -148,18 +203,19 @@ async def test_max_affordable_seconds(real_db):
 
 
 @pytest.mark.asyncio
-async def test_debit_for_run_idempotent_and_deducts(real_db):
+async def test_debit_for_run_idempotent_and_deducts(real_db, make_run):
     org_id = await real_db("org_bill_debit")
+    run_id = await make_run(org_id)
     await billing_service.credit(org_id, 10000, "topup")
     await billing_service.debit_for_run(
         organization_id=org_id,
-        workflow_run_id=555,
+        workflow_run_id=run_id,
         duration_seconds=90,
         price_per_minute_cents=6000,
     )
     await billing_service.debit_for_run(
         organization_id=org_id,
-        workflow_run_id=555,
+        workflow_run_id=run_id,
         duration_seconds=90,
         price_per_minute_cents=6000,
     )
@@ -170,22 +226,23 @@ async def test_debit_for_run_idempotent_and_deducts(real_db):
 
 
 @pytest.mark.asyncio
-async def test_concurrent_debits_do_not_lose_updates(real_db):
+async def test_concurrent_debits_do_not_lose_updates(real_db, make_run):
     import asyncio
 
     org_id = await real_db("org_bill_concurrent")
     await billing_service.credit(org_id, 10000, "topup")
+    run_ids = [await make_run(org_id) for _ in range(10)]
 
     # 10 concurrent debits of distinct runs, 60s @ 100c/min = 100c each => 1000c total
     await asyncio.gather(
         *[
             billing_service.debit_for_run(
                 organization_id=org_id,
-                workflow_run_id=1000 + i,
+                workflow_run_id=run_id,
                 duration_seconds=60,
                 price_per_minute_cents=100,
             )
-            for i in range(10)
+            for run_id in run_ids
         ]
     )
     assert await billing_service.get_balance_cents(org_id) == 9000
@@ -195,12 +252,13 @@ async def test_concurrent_debits_do_not_lose_updates(real_db):
 
 
 @pytest.mark.asyncio
-async def test_authorize_then_settle_reduces_balance(real_db):
+async def test_authorize_then_settle_reduces_balance(real_db, make_run):
     from types import SimpleNamespace
 
     from api.db import db_client
 
     org_id = await real_db("org_bill_lifecycle")
+    run_id = await make_run(org_id)
     await billing_service.credit(org_id, 10000, "topup")
     await db_client.create_pricing_rule(
         organization_id=org_id,
@@ -223,7 +281,7 @@ async def test_authorize_then_settle_reduces_balance(real_db):
 
     await billing_service.debit_for_run(
         organization_id=org_id,
-        workflow_run_id=42,
+        workflow_run_id=run_id,
         duration_seconds=30,
         price_per_minute_cents=rate.price_per_minute_cents,
     )
