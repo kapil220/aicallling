@@ -2,3 +2,9 @@ mypy==2.0.0
 watchfiles==1.1.1
 datamodel-code-generator==0.56.1
 twine==6.2.0
+# Pinned deliberately: the Pre-PR drift check runs scripts/format.sh and fails
+# on any diff, so an unpinned ruff turns every PR red the day ruff changes its
+# formatting. pipecat's dev group asks for ruff>=0.12.11,<1 and installs after
+# this file, but a satisfied pin is left alone. Bump this and commit the
+# resulting reformat in one PR.
+ruff==0.16.2
