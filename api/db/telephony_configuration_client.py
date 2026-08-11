@@ -228,3 +228,33 @@ class TelephonyConfigurationClient(BaseDBClient):
             )
             .values(is_default_outbound=False)
         )
+
+    async def get_platform_telephony_configuration(
+        self, organization_id: int
+    ) -> Optional[TelephonyConfigurationModel]:
+        """The org's platform-managed subaccount config (saas phase 3)."""
+        async with self.async_session() as session:
+            result = await session.execute(
+                select(TelephonyConfigurationModel).where(
+                    TelephonyConfigurationModel.organization_id == organization_id,
+                    TelephonyConfigurationModel.is_platform.is_(True),
+                )
+            )
+            return result.scalars().first()
+
+    async def create_platform_telephony_configuration(
+        self, organization_id: int, credentials: Dict[str, Any]
+    ) -> TelephonyConfigurationModel:
+        config = await self.create_telephony_configuration(
+            organization_id,
+            name="Platform numbers",
+            provider="twilio",
+            credentials=credentials,
+            is_default_outbound=False,
+        )
+        async with self.async_session() as session:
+            row = await session.get(TelephonyConfigurationModel, config.id)
+            row.is_platform = True
+            await session.commit()
+            await session.refresh(row)
+            return row

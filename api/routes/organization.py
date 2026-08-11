@@ -621,6 +621,8 @@ async def update_telephony_configuration(
     )
     if not existing:
         raise HTTPException(status_code=404, detail="Telephony configuration not found")
+    if getattr(existing, "is_platform", False):
+        raise HTTPException(status_code=403, detail="platform_managed")
 
     credentials = None
     if request.config is not None:
@@ -667,6 +669,12 @@ async def delete_telephony_configuration(
 ):
     if not user.selected_organization_id:
         raise HTTPException(status_code=400, detail="No organization selected")
+
+    target = await db_client.get_telephony_configuration_for_org(
+        config_id, user.selected_organization_id
+    )
+    if target is not None and getattr(target, "is_platform", False):
+        raise HTTPException(status_code=403, detail="platform_managed")
 
     try:
         deleted = await db_client.delete_telephony_configuration(
@@ -849,6 +857,8 @@ async def update_phone_number(
     existing = await db_client.get_phone_number_for_config(phone_number_id, config_id)
     if not existing:
         raise HTTPException(status_code=404, detail="Phone number not found")
+    if getattr(existing, "is_platform", False):
+        raise HTTPException(status_code=403, detail="platform_managed")
 
     if request.inbound_workflow_id is not None:
         await _ensure_workflow_belongs_to_org(
@@ -910,6 +920,8 @@ async def delete_phone_number(
     existing = await db_client.get_phone_number_for_config(phone_number_id, config_id)
     if not existing:
         raise HTTPException(status_code=404, detail="Phone number not found")
+    if getattr(existing, "is_platform", False):
+        raise HTTPException(status_code=403, detail="platform_managed")
 
     deleted = await db_client.delete_phone_number(phone_number_id, config_id)
     if not deleted:

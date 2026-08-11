@@ -351,6 +351,53 @@ Orgs without an active plan run under trial limits, tunable via env:
 these per subscription; `halted`/`cancelled` subscriptions block new calls
 while keeping agents editable.
 
+## Step 6: Platform Twilio Numbers (Phase 3)
+
+Platform numbers let tenants buy phone numbers from your Twilio account
+without bringing their own telephony provider. Each org gets a Twilio
+subaccount (named `voxagent-org-{id}` in the Twilio console) created lazily
+on first purchase; numbers are bought inside it with the inbound webhook
+pre-wired.
+
+### Environment Variables
+
+Add to `api/.env`:
+
+```bash
+PLATFORM_TWILIO_ACCOUNT_SID=ACxxxxxxxx      # parent account
+PLATFORM_TWILIO_AUTH_TOKEN=...
+# Optional tuning (defaults shown):
+PLATFORM_NUMBER_COUNTRIES=US,CA,IN
+PLATFORM_NUMBER_RENTAL_MINUTES_DEFAULT=10   # min-equivalent per month (US/CA)
+PLATFORM_NUMBER_RENTAL_MINUTES_IN=20
+PLATFORM_NUMBER_CARRIER_CENTS_PER_MINUTE=50 # 0.5 min extra per calling minute
+NUMBER_RENTAL_GRACE_DAYS=7
+```
+
+### How Billing Works
+
+- Purchase charges the first month's rental immediately from the org's
+  minutes ledger (`number_rental` entries, shown in minutes-equivalent).
+- A daily ARQ cron (02:00 UTC — **the ARQ worker must be running**) renews
+  rentals every 30 days, idempotently. Insufficient balance marks the number
+  `past_due` (banner in the UI, still routable); still unpaid
+  `NUMBER_RENTAL_GRACE_DAYS` after the renewal date, the number is released
+  at Twilio and deactivated.
+- Calls on platform numbers additionally burn
+  `PLATFORM_NUMBER_CARRIER_CENTS_PER_MINUTE` per minute (`carrier_debit`
+  ledger entries) on top of AI minutes.
+
+### India Numbers
+
+Twilio requires regulatory bundles for IN numbers; these are handled
+manually in the Twilio console. Purchase attempts without an approved bundle
+fail with Twilio's error message shown verbatim to the user.
+
+### Oversight
+
+Superadmins can list every provisioned number across orgs:
+`GET /api/v1/superuser/platform-numbers`.
+
 ## Troubleshooting
 
 ### Backend Won't Start: SaaS Config Validation Fails

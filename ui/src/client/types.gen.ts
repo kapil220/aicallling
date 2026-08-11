@@ -284,6 +284,32 @@ export type AuthUserResponse = {
 };
 
 /**
+ * AvailableNumberResponse
+ */
+export type AvailableNumberResponse = {
+    /**
+     * Phone Number
+     */
+    phone_number: string;
+    /**
+     * Friendly Name
+     */
+    friendly_name: string | null;
+    /**
+     * Locality
+     */
+    locality: string | null;
+    /**
+     * Region
+     */
+    region: string | null;
+    /**
+     * Rental Cents
+     */
+    rental_cents: number;
+};
+
+/**
  * Azure OpenAI
  */
 export type AzureLlmService = {
@@ -1338,6 +1364,24 @@ export type CloudonixConfigurationResponse = {
      * From Numbers
      */
     from_numbers: Array<string>;
+};
+
+/**
+ * CountryPricing
+ */
+export type CountryPricing = {
+    /**
+     * Country
+     */
+    country: string;
+    /**
+     * Rental Minutes
+     */
+    rental_minutes: number;
+    /**
+     * Rental Cents
+     */
+    rental_cents: number;
 };
 
 /**
@@ -3106,6 +3150,16 @@ export type ImpersonateResponse = {
 };
 
 /**
+ * InboundWorkflowRequest
+ */
+export type InboundWorkflowRequest = {
+    /**
+     * Inbound Workflow Id
+     */
+    inbound_workflow_id?: number | null;
+};
+
+/**
  * InitEmbedRequest
  *
  * Request model for initializing an embed session
@@ -4646,6 +4700,86 @@ export type PlanUpdateRequest = {
 };
 
 /**
+ * PlatformNumberAdminResponse
+ */
+export type PlatformNumberAdminResponse = {
+    /**
+     * Id
+     */
+    id: number;
+    /**
+     * Organization Id
+     */
+    organization_id: number;
+    /**
+     * Address
+     */
+    address: string;
+    /**
+     * Country Code
+     */
+    country_code: string | null;
+    /**
+     * Rental Cents
+     */
+    rental_cents: number | null;
+    /**
+     * Next Renewal At
+     */
+    next_renewal_at: string | null;
+    /**
+     * Rental Status
+     */
+    rental_status: string | null;
+    /**
+     * Is Active
+     */
+    is_active: boolean;
+};
+
+/**
+ * PlatformNumberResponse
+ */
+export type PlatformNumberResponse = {
+    /**
+     * Id
+     */
+    id: number;
+    /**
+     * Address
+     */
+    address: string;
+    /**
+     * Country Code
+     */
+    country_code: string | null;
+    /**
+     * Rental Cents
+     */
+    rental_cents: number | null;
+    /**
+     * Rental Minutes Equivalent
+     */
+    rental_minutes_equivalent: number | null;
+    /**
+     * Next Renewal At
+     */
+    next_renewal_at: string | null;
+    /**
+     * Rental Status
+     */
+    rental_status: string | null;
+    /**
+     * Inbound Workflow Id
+     */
+    inbound_workflow_id: number | null;
+    /**
+     * Is Active
+     */
+    is_active: boolean;
+};
+
+/**
  * PlivoConfigurationRequest
  *
  * Request schema for Plivo configuration.
@@ -4781,6 +4915,20 @@ export type PresignedUploadUrlResponse = {
      * Expires In
      */
     expires_in: number;
+};
+
+/**
+ * PricingResponse
+ */
+export type PricingResponse = {
+    /**
+     * Countries
+     */
+    countries: Array<CountryPricing>;
+    /**
+     * Carrier Cents Per Minute
+     */
+    carrier_cents_per_minute: number;
 };
 
 /**
@@ -4984,6 +5132,24 @@ export type ProviderSyncStatus = {
      * Message
      */
     message?: string | null;
+};
+
+/**
+ * PurchaseRequest
+ */
+export type PurchaseRequest = {
+    /**
+     * Phone Number
+     */
+    phone_number: string;
+    /**
+     * Country
+     */
+    country: string;
+    /**
+     * Inbound Workflow Id
+     */
+    inbound_workflow_id?: number | null;
 };
 
 /**
@@ -8689,6 +8855,47 @@ export type UpdatePlanAdminApiV1SuperuserPlansPlanIdPatchResponses = {
 
 export type UpdatePlanAdminApiV1SuperuserPlansPlanIdPatchResponse = UpdatePlanAdminApiV1SuperuserPlansPlanIdPatchResponses[keyof UpdatePlanAdminApiV1SuperuserPlansPlanIdPatchResponses];
 
+export type ListPlatformNumbersAdminApiV1SuperuserPlatformNumbersGetData = {
+    body?: never;
+    headers?: {
+        /**
+         * Authorization
+         */
+        authorization?: string | null;
+        /**
+         * X-Api-Key
+         */
+        'X-API-Key'?: string | null;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/superuser/platform-numbers';
+};
+
+export type ListPlatformNumbersAdminApiV1SuperuserPlatformNumbersGetErrors = {
+    /**
+     * Not found
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ListPlatformNumbersAdminApiV1SuperuserPlatformNumbersGetError = ListPlatformNumbersAdminApiV1SuperuserPlatformNumbersGetErrors[keyof ListPlatformNumbersAdminApiV1SuperuserPlatformNumbersGetErrors];
+
+export type ListPlatformNumbersAdminApiV1SuperuserPlatformNumbersGetResponses = {
+    /**
+     * Response List Platform Numbers Admin Api V1 Superuser Platform Numbers Get
+     *
+     * Successful Response
+     */
+    200: Array<PlatformNumberAdminResponse>;
+};
+
+export type ListPlatformNumbersAdminApiV1SuperuserPlatformNumbersGetResponse = ListPlatformNumbersAdminApiV1SuperuserPlatformNumbersGetResponses[keyof ListPlatformNumbersAdminApiV1SuperuserPlatformNumbersGetResponses];
+
 export type ListPacksApiV1BillingPacksGetData = {
     body?: never;
     headers?: {
@@ -9139,6 +9346,265 @@ export type GetLedgerApiV1BillingLedgerGetResponses = {
 };
 
 export type GetLedgerApiV1BillingLedgerGetResponse = GetLedgerApiV1BillingLedgerGetResponses[keyof GetLedgerApiV1BillingLedgerGetResponses];
+
+export type GetPricingApiV1PlatformNumbersPricingGetData = {
+    body?: never;
+    headers?: {
+        /**
+         * Authorization
+         */
+        authorization?: string | null;
+        /**
+         * X-Api-Key
+         */
+        'X-API-Key'?: string | null;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/platform-numbers/pricing';
+};
+
+export type GetPricingApiV1PlatformNumbersPricingGetErrors = {
+    /**
+     * Not found
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetPricingApiV1PlatformNumbersPricingGetError = GetPricingApiV1PlatformNumbersPricingGetErrors[keyof GetPricingApiV1PlatformNumbersPricingGetErrors];
+
+export type GetPricingApiV1PlatformNumbersPricingGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: PricingResponse;
+};
+
+export type GetPricingApiV1PlatformNumbersPricingGetResponse = GetPricingApiV1PlatformNumbersPricingGetResponses[keyof GetPricingApiV1PlatformNumbersPricingGetResponses];
+
+export type SearchNumbersApiV1PlatformNumbersSearchGetData = {
+    body?: never;
+    headers?: {
+        /**
+         * Authorization
+         */
+        authorization?: string | null;
+        /**
+         * X-Api-Key
+         */
+        'X-API-Key'?: string | null;
+    };
+    path?: never;
+    query: {
+        /**
+         * Country
+         */
+        country: string;
+        /**
+         * Area Code
+         */
+        area_code?: string | null;
+        /**
+         * Contains
+         */
+        contains?: string | null;
+    };
+    url: '/api/v1/platform-numbers/search';
+};
+
+export type SearchNumbersApiV1PlatformNumbersSearchGetErrors = {
+    /**
+     * Not found
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type SearchNumbersApiV1PlatformNumbersSearchGetError = SearchNumbersApiV1PlatformNumbersSearchGetErrors[keyof SearchNumbersApiV1PlatformNumbersSearchGetErrors];
+
+export type SearchNumbersApiV1PlatformNumbersSearchGetResponses = {
+    /**
+     * Response Search Numbers Api V1 Platform Numbers Search Get
+     *
+     * Successful Response
+     */
+    200: Array<AvailableNumberResponse>;
+};
+
+export type SearchNumbersApiV1PlatformNumbersSearchGetResponse = SearchNumbersApiV1PlatformNumbersSearchGetResponses[keyof SearchNumbersApiV1PlatformNumbersSearchGetResponses];
+
+export type PurchaseNumberApiV1PlatformNumbersPurchasePostData = {
+    body: PurchaseRequest;
+    headers?: {
+        /**
+         * Authorization
+         */
+        authorization?: string | null;
+        /**
+         * X-Api-Key
+         */
+        'X-API-Key'?: string | null;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/platform-numbers/purchase';
+};
+
+export type PurchaseNumberApiV1PlatformNumbersPurchasePostErrors = {
+    /**
+     * Not found
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type PurchaseNumberApiV1PlatformNumbersPurchasePostError = PurchaseNumberApiV1PlatformNumbersPurchasePostErrors[keyof PurchaseNumberApiV1PlatformNumbersPurchasePostErrors];
+
+export type PurchaseNumberApiV1PlatformNumbersPurchasePostResponses = {
+    /**
+     * Successful Response
+     */
+    200: PlatformNumberResponse;
+};
+
+export type PurchaseNumberApiV1PlatformNumbersPurchasePostResponse = PurchaseNumberApiV1PlatformNumbersPurchasePostResponses[keyof PurchaseNumberApiV1PlatformNumbersPurchasePostResponses];
+
+export type ListNumbersApiV1PlatformNumbersGetData = {
+    body?: never;
+    headers?: {
+        /**
+         * Authorization
+         */
+        authorization?: string | null;
+        /**
+         * X-Api-Key
+         */
+        'X-API-Key'?: string | null;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/platform-numbers';
+};
+
+export type ListNumbersApiV1PlatformNumbersGetErrors = {
+    /**
+     * Not found
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ListNumbersApiV1PlatformNumbersGetError = ListNumbersApiV1PlatformNumbersGetErrors[keyof ListNumbersApiV1PlatformNumbersGetErrors];
+
+export type ListNumbersApiV1PlatformNumbersGetResponses = {
+    /**
+     * Response List Numbers Api V1 Platform Numbers Get
+     *
+     * Successful Response
+     */
+    200: Array<PlatformNumberResponse>;
+};
+
+export type ListNumbersApiV1PlatformNumbersGetResponse = ListNumbersApiV1PlatformNumbersGetResponses[keyof ListNumbersApiV1PlatformNumbersGetResponses];
+
+export type ReleaseNumberApiV1PlatformNumbersPhoneNumberIdReleasePostData = {
+    body?: never;
+    headers?: {
+        /**
+         * Authorization
+         */
+        authorization?: string | null;
+        /**
+         * X-Api-Key
+         */
+        'X-API-Key'?: string | null;
+    };
+    path: {
+        /**
+         * Phone Number Id
+         */
+        phone_number_id: number;
+    };
+    query?: never;
+    url: '/api/v1/platform-numbers/{phone_number_id}/release';
+};
+
+export type ReleaseNumberApiV1PlatformNumbersPhoneNumberIdReleasePostErrors = {
+    /**
+     * Not found
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ReleaseNumberApiV1PlatformNumbersPhoneNumberIdReleasePostError = ReleaseNumberApiV1PlatformNumbersPhoneNumberIdReleasePostErrors[keyof ReleaseNumberApiV1PlatformNumbersPhoneNumberIdReleasePostErrors];
+
+export type ReleaseNumberApiV1PlatformNumbersPhoneNumberIdReleasePostResponses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
+
+export type SetInboundWorkflowApiV1PlatformNumbersPhoneNumberIdInboundWorkflowPutData = {
+    body: InboundWorkflowRequest;
+    headers?: {
+        /**
+         * Authorization
+         */
+        authorization?: string | null;
+        /**
+         * X-Api-Key
+         */
+        'X-API-Key'?: string | null;
+    };
+    path: {
+        /**
+         * Phone Number Id
+         */
+        phone_number_id: number;
+    };
+    query?: never;
+    url: '/api/v1/platform-numbers/{phone_number_id}/inbound-workflow';
+};
+
+export type SetInboundWorkflowApiV1PlatformNumbersPhoneNumberIdInboundWorkflowPutErrors = {
+    /**
+     * Not found
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type SetInboundWorkflowApiV1PlatformNumbersPhoneNumberIdInboundWorkflowPutError = SetInboundWorkflowApiV1PlatformNumbersPhoneNumberIdInboundWorkflowPutErrors[keyof SetInboundWorkflowApiV1PlatformNumbersPhoneNumberIdInboundWorkflowPutErrors];
+
+export type SetInboundWorkflowApiV1PlatformNumbersPhoneNumberIdInboundWorkflowPutResponses = {
+    /**
+     * Successful Response
+     */
+    200: PlatformNumberResponse;
+};
+
+export type SetInboundWorkflowApiV1PlatformNumbersPhoneNumberIdInboundWorkflowPutResponse = SetInboundWorkflowApiV1PlatformNumbersPhoneNumberIdInboundWorkflowPutResponses[keyof SetInboundWorkflowApiV1PlatformNumbersPhoneNumberIdInboundWorkflowPutResponses];
 
 export type StripeWebhookApiV1WebhooksStripePostData = {
     body?: never;

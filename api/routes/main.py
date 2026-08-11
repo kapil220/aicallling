@@ -16,6 +16,7 @@ from api.routes.node_types import router as node_types_router
 from api.routes.organization import router as organization_router
 from api.routes.organization_members import router as organization_members_router
 from api.routes.organization_usage import router as organization_usage_router
+from api.routes.platform_numbers import router as platform_numbers_router
 from api.routes.public_agent import router as public_agent_router
 from api.routes.public_download import router as public_download_router
 from api.routes.public_embed import router as public_embed_router
@@ -46,6 +47,7 @@ router.include_router(superuser_router)
 router.include_router(billing_admin_router)
 router.include_router(billing_router)
 router.include_router(billing_balance_router)
+router.include_router(platform_numbers_router)
 router.include_router(webhooks_router)
 router.include_router(clerk_webhooks_router)
 router.include_router(workflow_router)

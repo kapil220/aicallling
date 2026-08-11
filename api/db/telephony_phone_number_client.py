@@ -12,6 +12,8 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.future import select
 
 from api.db.base_client import BaseDBClient
+
+_UNSET = object()
 from api.db.models import (
     TelephonyConfigurationModel,
     TelephonyPhoneNumberModel,
@@ -346,3 +348,61 @@ class TelephonyPhoneNumberClient(BaseDBClient):
             )
             .values(is_default_caller_id=False)
         )
+
+    async def list_platform_numbers_for_org(
+        self, organization_id: int
+    ) -> List[TelephonyPhoneNumberModel]:
+        async with self.async_session() as session:
+            result = await session.execute(
+                select(TelephonyPhoneNumberModel)
+                .where(
+                    TelephonyPhoneNumberModel.organization_id == organization_id,
+                    TelephonyPhoneNumberModel.is_platform.is_(True),
+                )
+                .order_by(TelephonyPhoneNumberModel.id.desc())
+            )
+            return list(result.scalars().all())
+
+    async def list_all_platform_numbers(
+        self, *, limit: int = 200
+    ) -> List[Tuple[TelephonyPhoneNumberModel, int]]:
+        async with self.async_session() as session:
+            result = await session.execute(
+                select(TelephonyPhoneNumberModel)
+                .where(TelephonyPhoneNumberModel.is_platform.is_(True))
+                .order_by(TelephonyPhoneNumberModel.id.desc())
+                .limit(limit)
+            )
+            return [(row, row.organization_id) for row in result.scalars().all()]
+
+    async def list_due_platform_numbers(self, now) -> List[TelephonyPhoneNumberModel]:
+        async with self.async_session() as session:
+            result = await session.execute(
+                select(TelephonyPhoneNumberModel).where(
+                    TelephonyPhoneNumberModel.is_platform.is_(True),
+                    TelephonyPhoneNumberModel.is_active.is_(True),
+                    TelephonyPhoneNumberModel.rental_status != "released",
+                    TelephonyPhoneNumberModel.next_renewal_at <= now,
+                )
+            )
+            return list(result.scalars().all())
+
+    async def update_platform_number_rental(
+        self,
+        phone_number_id: int,
+        *,
+        rental_status=_UNSET,
+        next_renewal_at=_UNSET,
+        is_active=_UNSET,
+    ) -> None:
+        async with self.async_session() as session:
+            row = await session.get(TelephonyPhoneNumberModel, phone_number_id)
+            if row is None:
+                return
+            if rental_status is not _UNSET:
+                row.rental_status = rental_status
+            if next_renewal_at is not _UNSET:
+                row.next_renewal_at = next_renewal_at
+            if is_active is not _UNSET:
+                row.is_active = is_active
+            await session.commit()

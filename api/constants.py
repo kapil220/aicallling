@@ -82,6 +82,33 @@ RAZORPAY_KEY_ID = os.getenv("RAZORPAY_KEY_ID")
 RAZORPAY_KEY_SECRET = os.getenv("RAZORPAY_KEY_SECRET")
 RAZORPAY_WEBHOOK_SECRET = os.getenv("RAZORPAY_WEBHOOK_SECRET")
 
+# Platform Twilio numbers (saas phase 3): parent account that provisions
+# per-org subaccounts and purchases numbers. Rentals are priced in
+# minutes-equivalent (1 minute == 100 ledger cents).
+PLATFORM_TWILIO_ACCOUNT_SID = os.getenv("PLATFORM_TWILIO_ACCOUNT_SID")
+PLATFORM_TWILIO_AUTH_TOKEN = os.getenv("PLATFORM_TWILIO_AUTH_TOKEN")
+PLATFORM_NUMBER_COUNTRIES = {
+    c.strip().upper()
+    for c in os.getenv("PLATFORM_NUMBER_COUNTRIES", "US,CA,IN").split(",")
+    if c.strip()
+}
+PLATFORM_NUMBER_RENTAL_MINUTES_DEFAULT = int(
+    os.getenv("PLATFORM_NUMBER_RENTAL_MINUTES_DEFAULT", "10")
+)
+PLATFORM_NUMBER_RENTAL_MINUTES = {
+    country: int(
+        os.getenv(
+            f"PLATFORM_NUMBER_RENTAL_MINUTES_{country}",
+            str(20 if country == "IN" else PLATFORM_NUMBER_RENTAL_MINUTES_DEFAULT),
+        )
+    )
+    for country in PLATFORM_NUMBER_COUNTRIES
+}
+PLATFORM_NUMBER_CARRIER_CENTS_PER_MINUTE = int(
+    os.getenv("PLATFORM_NUMBER_CARRIER_CENTS_PER_MINUTE", "50")
+)
+NUMBER_RENTAL_GRACE_DAYS = int(os.getenv("NUMBER_RENTAL_GRACE_DAYS", "7"))
+
 # Google Sheets integration (Phase 5): leads-in campaign source + results write-back.
 # Off by default; requires a configured Google OAuth app to be useful.
 GOOGLE_SHEETS_ENABLED = os.getenv("GOOGLE_SHEETS_ENABLED", "false").lower() == "true"

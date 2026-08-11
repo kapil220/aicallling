@@ -472,6 +472,11 @@ class TelephonyConfigurationModel(Base):
     is_default_outbound = Column(
         Boolean, nullable=False, default=False, server_default=text("false")
     )
+    # Phase 3 (saas): True for the org's platform-managed Twilio subaccount
+    # config. Hidden from user CRUD; provisioned/owned by platform_numbers.
+    is_platform = Column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
     updated_at = Column(
         DateTime(timezone=True),
@@ -528,6 +533,15 @@ class TelephonyPhoneNumberModel(Base):
     is_default_caller_id = Column(
         Boolean, nullable=False, default=False, server_default=text("false")
     )
+    # Phase 3 (saas): platform-provisioned number metadata. rental_status:
+    # active | past_due | released. provider_sid = Twilio IncomingPhoneNumber SID.
+    is_platform = Column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
+    provider_sid = Column(String, nullable=True)
+    rental_cents = Column(Integer, nullable=True)
+    next_renewal_at = Column(DateTime(timezone=True), nullable=True)
+    rental_status = Column(String, nullable=True)
     extra_metadata = Column(
         JSON, nullable=False, default=dict, server_default=text("'{}'::json")
     )
