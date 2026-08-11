@@ -375,9 +375,7 @@ class TelephonyPhoneNumberClient(BaseDBClient):
             )
             return [(row, row.organization_id) for row in result.scalars().all()]
 
-    async def list_due_platform_numbers(
-        self, now
-    ) -> List[TelephonyPhoneNumberModel]:
+    async def list_due_platform_numbers(self, now) -> List[TelephonyPhoneNumberModel]:
         async with self.async_session() as session:
             result = await session.execute(
                 select(TelephonyPhoneNumberModel).where(
