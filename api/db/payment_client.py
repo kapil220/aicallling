@@ -120,9 +120,7 @@ class PaymentClient(BaseDBClient):
             result = await session.execute(stmt)
             return list(result.scalars().all())
 
-    async def get_org_stripe_customer_id(
-        self, organization_id: int
-    ) -> Optional[str]:
+    async def get_org_stripe_customer_id(self, organization_id: int) -> Optional[str]:
         async with self.async_session() as session:
             result = await session.execute(
                 select(OrganizationModel.stripe_customer_id).where(
@@ -136,9 +134,7 @@ class PaymentClient(BaseDBClient):
     ) -> None:
         async with self.async_session() as session:
             result = await session.execute(
-                select(OrganizationModel).where(
-                    OrganizationModel.id == organization_id
-                )
+                select(OrganizationModel).where(OrganizationModel.id == organization_id)
             )
             org = result.scalars().one()
             org.stripe_customer_id = stripe_customer_id

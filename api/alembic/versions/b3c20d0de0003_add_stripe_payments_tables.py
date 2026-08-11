@@ -126,7 +126,5 @@ def downgrade() -> None:
     op.drop_index("ix_payment_packs_pack_key", table_name="payment_packs")
     op.drop_index("ix_payment_packs_id", table_name="payment_packs")
     op.drop_table("payment_packs")
-    op.drop_index(
-        "ix_organizations_stripe_customer_id", table_name="organizations"
-    )
+    op.drop_index("ix_organizations_stripe_customer_id", table_name="organizations")
     op.drop_column("organizations", "stripe_customer_id")

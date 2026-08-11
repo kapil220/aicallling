@@ -7,12 +7,16 @@ deployment limp into production (spec §1).
 from api.constants import (
     AUTH_PROVIDER,
     BILLING_ENGINE,
+    BILLING_PAYMENTS_ENABLED,
     CLERK_ISSUER,
     CLERK_WEBHOOK_SECRET,
     CORS_ALLOWED_ORIGINS,
     DEPLOYMENT_MODE,
     DEPLOYMENT_MODE_SAAS,
     OSS_JWT_SECRET,
+    RAZORPAY_KEY_ID,
+    RAZORPAY_KEY_SECRET,
+    RAZORPAY_WEBHOOK_SECRET,
 )
 
 _DEFAULT_JWT_SECRET = "change-me-in-production"
@@ -35,6 +39,16 @@ def validate_saas_config() -> None:
         problems.append("OSS_JWT_SECRET must be set to a non-default value")
     if not CORS_ALLOWED_ORIGINS:
         problems.append("CORS_ALLOWED_ORIGINS must be an explicit allowlist")
+    if BILLING_PAYMENTS_ENABLED:
+        for name, value in (
+            ("RAZORPAY_KEY_ID", RAZORPAY_KEY_ID),
+            ("RAZORPAY_KEY_SECRET", RAZORPAY_KEY_SECRET),
+            ("RAZORPAY_WEBHOOK_SECRET", RAZORPAY_WEBHOOK_SECRET),
+        ):
+            if not value:
+                problems.append(
+                    f"{name} is required when BILLING_PAYMENTS_ENABLED=true"
+                )
 
     if problems:
         raise RuntimeError(

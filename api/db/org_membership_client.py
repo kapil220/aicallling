@@ -17,9 +17,7 @@ class LastAdminError(Exception):
 
 
 class OrgMembershipClient(BaseDBClient):
-    async def get_member_role(
-        self, organization_id: int, user_id: int
-    ) -> str | None:
+    async def get_member_role(self, organization_id: int, user_id: int) -> str | None:
         async with self.async_session() as session:
             result = await session.execute(
                 select(OrganizationUserModel.role).where(
@@ -88,9 +86,7 @@ class OrgMembershipClient(BaseDBClient):
                     .with_for_update()
                 )
                 memberships = rows.scalars().all()
-                target = next(
-                    (m for m in memberships if m.user_id == user_id), None
-                )
+                target = next((m for m in memberships if m.user_id == user_id), None)
                 if target is None:
                     raise ValueError("not_a_member")
 
@@ -112,9 +108,7 @@ class OrgMembershipClient(BaseDBClient):
                     .with_for_update()
                 )
                 memberships = rows.scalars().all()
-                target = next(
-                    (m for m in memberships if m.user_id == user_id), None
-                )
+                target = next((m for m in memberships if m.user_id == user_id), None)
                 if target is None:
                     raise ValueError("not_a_member")
 

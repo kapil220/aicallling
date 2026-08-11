@@ -15,6 +15,7 @@ from api.db import db_client
 from api.db.models import UserModel
 from api.enums import OrganizationConfigurationKey
 from api.services.auth.depends import get_user
+from api.services.billing import plan_limits
 from api.services.campaign.runner import campaign_runner_service
 from api.services.campaign.source_sync import CampaignSourceSyncService
 from api.services.campaign.source_sync_factory import get_sync_service
@@ -33,10 +34,15 @@ async def _get_org_concurrent_limit(organization_id: int) -> int:
             OrganizationConfigurationKey.CONCURRENT_CALL_LIMIT.value,
         )
         if config and config.value:
-            return int(config.value.get("value", DEFAULT_ORG_CONCURRENCY_LIMIT))
+            configured = int(config.value.get("value", DEFAULT_ORG_CONCURRENCY_LIMIT))
+        else:
+            configured = DEFAULT_ORG_CONCURRENCY_LIMIT
     except Exception:
-        pass
-    return DEFAULT_ORG_CONCURRENCY_LIMIT
+        configured = DEFAULT_ORG_CONCURRENCY_LIMIT
+    if plan_limits.enforcement_enabled():
+        limits = await plan_limits.get_org_limits(organization_id)
+        return min(configured, limits.max_concurrent_calls)
+    return configured
 
 
 async def _get_from_numbers_count(organization_id: int) -> int:
@@ -548,6 +554,12 @@ async def start_campaign(
     if not campaign:
         raise HTTPException(status_code=404, detail="Campaign not found")
 
+    limit_error = await plan_limits.check_can_start_campaign(
+        user.selected_organization_id
+    )
+    if limit_error:
+        raise HTTPException(status_code=402, detail=limit_error)
+
     # Check Dograh quota before starting campaign (apply per-workflow
     # model_overrides so we evaluate the keys this campaign will use).
     quota_result = await authorize_workflow_run_start(
@@ -872,6 +884,12 @@ async def resume_campaign(
     campaign = await db_client.get_campaign(campaign_id, user.selected_organization_id)
     if not campaign:
         raise HTTPException(status_code=404, detail="Campaign not found")
+
+    limit_error = await plan_limits.check_can_start_campaign(
+        user.selected_organization_id
+    )
+    if limit_error:
+        raise HTTPException(status_code=402, detail=limit_error)
 
     # Check Dograh quota before resuming campaign (apply per-workflow
     # model_overrides so we evaluate the keys this campaign will use).

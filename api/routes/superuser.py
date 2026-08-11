@@ -283,4 +283,9 @@ async def override_member_role(
     except LastAdminError:
         raise HTTPException(status_code=409, detail="cannot_remove_last_admin")
 
-    return {"status": "updated", "org_id": org_id, "user_id": user_id, "role": body.role}
+    return {
+        "status": "updated",
+        "org_id": org_id,
+        "user_id": user_id,
+        "role": body.role,
+    }

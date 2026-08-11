@@ -64,9 +64,7 @@ async def test_user_updated_syncs_email(async_client, db_session):
             "data": {
                 "id": "user_wh_1",
                 "primary_email_address_id": "em_1",
-                "email_addresses": [
-                    {"id": "em_1", "email_address": "new@example.com"}
-                ],
+                "email_addresses": [{"id": "em_1", "email_address": "new@example.com"}],
             },
         }
     )
@@ -86,7 +84,9 @@ async def test_user_deleted_archives_api_keys(async_client, db_session):
         org_provider_id="org_user_wh_2", user_id=user.id
     )
     await db_session.update_user_selected_organization(user.id, org.id)
-    await db_session.create_api_key(organization_id=org.id, name="k", created_by=user.id)
+    await db_session.create_api_key(
+        organization_id=org.id, name="k", created_by=user.id
+    )
 
     body = json.dumps({"type": "user.deleted", "data": {"id": "user_wh_2"}})
     resp = await async_client.post(

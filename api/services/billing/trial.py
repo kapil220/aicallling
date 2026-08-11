@@ -9,7 +9,9 @@ from api.services.billing import billing_service
 CENTS_PER_MINUTE = 100
 
 
-async def grant_signup_trial(organization_id: int, created_by: int | None = None) -> None:
+async def grant_signup_trial(
+    organization_id: int, created_by: int | None = None
+) -> None:
     """Grant a one-time signup trial credit to an organization.
 
     Grants TRIAL_MINUTES * 100 cents once per org (idempotent via signup_trial key).

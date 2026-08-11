@@ -213,9 +213,7 @@ def require_org_role(min_role: Role):
     return _dependency
 
 
-async def has_org_role(
-    user: UserModel, organization_id: int, min_role: Role
-) -> bool:
+async def has_org_role(user: UserModel, organization_id: int, min_role: Role) -> bool:
     """Non-dependency role check for business-logic branches (not a route
     boundary) — e.g. conditionally including a "manage" action in a response."""
     if user.is_superuser:
@@ -268,9 +266,10 @@ async def _handle_clerk_auth(authorization: str | None) -> UserModel:
     provider_id = claims["sub"]
 
     try:
-        user_model, user_was_created = await db_client.get_or_create_user_by_provider_id(
-            provider_id
-        )
+        (
+            user_model,
+            user_was_created,
+        ) = await db_client.get_or_create_user_by_provider_id(provider_id)
         clerk_email = claims.get("email")
         if clerk_email and user_model.email != clerk_email:
             await db_client.update_user_email(user_model.id, clerk_email)
@@ -289,10 +288,11 @@ async def _handle_clerk_auth(authorization: str | None) -> UserModel:
         )
 
     try:
-        organization, org_was_created = (
-            await db_client.get_or_create_organization_by_provider_id(
-                org_provider_id=f"org_{provider_id}", user_id=user_model.id
-            )
+        (
+            organization,
+            org_was_created,
+        ) = await db_client.get_or_create_organization_by_provider_id(
+            org_provider_id=f"org_{provider_id}", user_id=user_model.id
         )
         if user_model.selected_organization_id != organization.id:
             await db_client.add_user_to_organization(

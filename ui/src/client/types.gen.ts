@@ -1125,6 +1125,16 @@ export type CheckoutResponse = {
 };
 
 /**
+ * CheckoutUrlResponse
+ */
+export type CheckoutUrlResponse = {
+    /**
+     * Checkout Url
+     */
+    checkout_url: string;
+};
+
+/**
  * ChunkResponseSchema
  *
  * Response schema for a document chunk.
@@ -3176,6 +3186,36 @@ export type InviteMemberRequest = {
 };
 
 /**
+ * InvoiceResponse
+ */
+export type InvoiceResponse = {
+    /**
+     * Id
+     */
+    id: number;
+    /**
+     * Razorpay Payment Id
+     */
+    razorpay_payment_id: string;
+    /**
+     * Amount Cents
+     */
+    amount_cents: number;
+    /**
+     * Currency
+     */
+    currency: string;
+    /**
+     * Status
+     */
+    status: string;
+    /**
+     * Created At
+     */
+    created_at: string | null;
+};
+
+/**
  * ItemKind
  */
 export type ItemKind = 'node' | 'edge' | 'workflow';
@@ -4398,6 +4438,214 @@ export type PhoneNumberUpdateRequest = {
 };
 
 /**
+ * PlanAdminResponse
+ */
+export type PlanAdminResponse = {
+    /**
+     * Id
+     */
+    id: number;
+    /**
+     * Tier Key
+     */
+    tier_key: string;
+    /**
+     * Display Name
+     */
+    display_name: string;
+    /**
+     * Price Cents
+     */
+    price_cents: number;
+    /**
+     * Currency
+     */
+    currency: string;
+    /**
+     * Included Minutes
+     */
+    included_minutes: number;
+    /**
+     * Max Agents
+     */
+    max_agents: number | null;
+    /**
+     * Max Concurrent Calls
+     */
+    max_concurrent_calls: number;
+    /**
+     * Daily Call Cap
+     */
+    daily_call_cap: number | null;
+    /**
+     * Max Active Campaigns
+     */
+    max_active_campaigns: number | null;
+    /**
+     * Razorpay Plan Id
+     */
+    razorpay_plan_id: string | null;
+    /**
+     * Is Active
+     */
+    is_active: boolean;
+    /**
+     * Sort Order
+     */
+    sort_order: number;
+};
+
+/**
+ * PlanPublicResponse
+ */
+export type PlanPublicResponse = {
+    /**
+     * Tier Key
+     */
+    tier_key: string;
+    /**
+     * Display Name
+     */
+    display_name: string;
+    /**
+     * Price Cents
+     */
+    price_cents: number;
+    /**
+     * Currency
+     */
+    currency: string;
+    /**
+     * Included Minutes
+     */
+    included_minutes: number;
+    /**
+     * Max Agents
+     */
+    max_agents: number | null;
+    /**
+     * Max Concurrent Calls
+     */
+    max_concurrent_calls: number;
+    /**
+     * Daily Call Cap
+     */
+    daily_call_cap: number | null;
+    /**
+     * Max Active Campaigns
+     */
+    max_active_campaigns: number | null;
+    /**
+     * Is Current
+     */
+    is_current: boolean;
+};
+
+/**
+ * PlanRequest
+ */
+export type PlanRequest = {
+    /**
+     * Tier Key
+     */
+    tier_key: string;
+    /**
+     * Display Name
+     */
+    display_name: string;
+    /**
+     * Price Cents
+     */
+    price_cents: number;
+    /**
+     * Currency
+     */
+    currency?: string;
+    /**
+     * Included Minutes
+     */
+    included_minutes: number;
+    /**
+     * Max Agents
+     */
+    max_agents?: number | null;
+    /**
+     * Max Concurrent Calls
+     */
+    max_concurrent_calls?: number;
+    /**
+     * Daily Call Cap
+     */
+    daily_call_cap?: number | null;
+    /**
+     * Max Active Campaigns
+     */
+    max_active_campaigns?: number | null;
+    /**
+     * Razorpay Plan Id
+     */
+    razorpay_plan_id?: string | null;
+    /**
+     * Is Active
+     */
+    is_active?: boolean;
+    /**
+     * Sort Order
+     */
+    sort_order?: number;
+};
+
+/**
+ * PlanUpdateRequest
+ */
+export type PlanUpdateRequest = {
+    /**
+     * Display Name
+     */
+    display_name?: string | null;
+    /**
+     * Price Cents
+     */
+    price_cents?: number | null;
+    /**
+     * Currency
+     */
+    currency?: string | null;
+    /**
+     * Included Minutes
+     */
+    included_minutes?: number | null;
+    /**
+     * Max Agents
+     */
+    max_agents?: number | null;
+    /**
+     * Max Concurrent Calls
+     */
+    max_concurrent_calls?: number | null;
+    /**
+     * Daily Call Cap
+     */
+    daily_call_cap?: number | null;
+    /**
+     * Max Active Campaigns
+     */
+    max_active_campaigns?: number | null;
+    /**
+     * Razorpay Plan Id
+     */
+    razorpay_plan_id?: string | null;
+    /**
+     * Is Active
+     */
+    is_active?: boolean | null;
+    /**
+     * Sort Order
+     */
+    sort_order?: number | null;
+};
+
+/**
  * PlivoConfigurationRequest
  *
  * Request schema for Plivo configuration.
@@ -5459,6 +5707,42 @@ export type SpeechmaticsSttConfiguration = {
      * ISO 639-1 language code.
      */
     language?: string;
+};
+
+/**
+ * SubscribeRequest
+ */
+export type SubscribeRequest = {
+    /**
+     * Tier Key
+     */
+    tier_key: string;
+};
+
+/**
+ * SubscriptionResponse
+ */
+export type SubscriptionResponse = {
+    /**
+     * Plan Tier
+     */
+    plan_tier: string | null;
+    /**
+     * Plan Display Name
+     */
+    plan_display_name: string | null;
+    /**
+     * Subscription Status
+     */
+    subscription_status: string | null;
+    /**
+     * Current Period End
+     */
+    current_period_end: string | null;
+    /**
+     * Included Minutes
+     */
+    included_minutes: number | null;
 };
 
 /**
@@ -8281,6 +8565,130 @@ export type CreatePaymentPackApiV1SuperuserPaymentPacksPostResponses = {
     200: unknown;
 };
 
+export type ListPlansAdminApiV1SuperuserPlansGetData = {
+    body?: never;
+    headers?: {
+        /**
+         * Authorization
+         */
+        authorization?: string | null;
+        /**
+         * X-Api-Key
+         */
+        'X-API-Key'?: string | null;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/superuser/plans';
+};
+
+export type ListPlansAdminApiV1SuperuserPlansGetErrors = {
+    /**
+     * Not found
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ListPlansAdminApiV1SuperuserPlansGetError = ListPlansAdminApiV1SuperuserPlansGetErrors[keyof ListPlansAdminApiV1SuperuserPlansGetErrors];
+
+export type ListPlansAdminApiV1SuperuserPlansGetResponses = {
+    /**
+     * Response List Plans Admin Api V1 Superuser Plans Get
+     *
+     * Successful Response
+     */
+    200: Array<PlanAdminResponse>;
+};
+
+export type ListPlansAdminApiV1SuperuserPlansGetResponse = ListPlansAdminApiV1SuperuserPlansGetResponses[keyof ListPlansAdminApiV1SuperuserPlansGetResponses];
+
+export type CreatePlanAdminApiV1SuperuserPlansPostData = {
+    body: PlanRequest;
+    headers?: {
+        /**
+         * Authorization
+         */
+        authorization?: string | null;
+        /**
+         * X-Api-Key
+         */
+        'X-API-Key'?: string | null;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/superuser/plans';
+};
+
+export type CreatePlanAdminApiV1SuperuserPlansPostErrors = {
+    /**
+     * Not found
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type CreatePlanAdminApiV1SuperuserPlansPostError = CreatePlanAdminApiV1SuperuserPlansPostErrors[keyof CreatePlanAdminApiV1SuperuserPlansPostErrors];
+
+export type CreatePlanAdminApiV1SuperuserPlansPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: PlanAdminResponse;
+};
+
+export type CreatePlanAdminApiV1SuperuserPlansPostResponse = CreatePlanAdminApiV1SuperuserPlansPostResponses[keyof CreatePlanAdminApiV1SuperuserPlansPostResponses];
+
+export type UpdatePlanAdminApiV1SuperuserPlansPlanIdPatchData = {
+    body: PlanUpdateRequest;
+    headers?: {
+        /**
+         * Authorization
+         */
+        authorization?: string | null;
+        /**
+         * X-Api-Key
+         */
+        'X-API-Key'?: string | null;
+    };
+    path: {
+        /**
+         * Plan Id
+         */
+        plan_id: number;
+    };
+    query?: never;
+    url: '/api/v1/superuser/plans/{plan_id}';
+};
+
+export type UpdatePlanAdminApiV1SuperuserPlansPlanIdPatchErrors = {
+    /**
+     * Not found
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type UpdatePlanAdminApiV1SuperuserPlansPlanIdPatchError = UpdatePlanAdminApiV1SuperuserPlansPlanIdPatchErrors[keyof UpdatePlanAdminApiV1SuperuserPlansPlanIdPatchErrors];
+
+export type UpdatePlanAdminApiV1SuperuserPlansPlanIdPatchResponses = {
+    /**
+     * Successful Response
+     */
+    200: PlanAdminResponse;
+};
+
+export type UpdatePlanAdminApiV1SuperuserPlansPlanIdPatchResponse = UpdatePlanAdminApiV1SuperuserPlansPlanIdPatchResponses[keyof UpdatePlanAdminApiV1SuperuserPlansPlanIdPatchResponses];
+
 export type ListPacksApiV1BillingPacksGetData = {
     body?: never;
     headers?: {
@@ -8411,6 +8819,242 @@ export type ListPaymentsApiV1BillingPaymentsGetResponses = {
 
 export type ListPaymentsApiV1BillingPaymentsGetResponse = ListPaymentsApiV1BillingPaymentsGetResponses[keyof ListPaymentsApiV1BillingPaymentsGetResponses];
 
+export type ListPlansApiV1BillingPlansGetData = {
+    body?: never;
+    headers?: {
+        /**
+         * Authorization
+         */
+        authorization?: string | null;
+        /**
+         * X-Api-Key
+         */
+        'X-API-Key'?: string | null;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/billing/plans';
+};
+
+export type ListPlansApiV1BillingPlansGetErrors = {
+    /**
+     * Not found
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ListPlansApiV1BillingPlansGetError = ListPlansApiV1BillingPlansGetErrors[keyof ListPlansApiV1BillingPlansGetErrors];
+
+export type ListPlansApiV1BillingPlansGetResponses = {
+    /**
+     * Response List Plans Api V1 Billing Plans Get
+     *
+     * Successful Response
+     */
+    200: Array<PlanPublicResponse>;
+};
+
+export type ListPlansApiV1BillingPlansGetResponse = ListPlansApiV1BillingPlansGetResponses[keyof ListPlansApiV1BillingPlansGetResponses];
+
+export type GetSubscriptionApiV1BillingSubscriptionGetData = {
+    body?: never;
+    headers?: {
+        /**
+         * Authorization
+         */
+        authorization?: string | null;
+        /**
+         * X-Api-Key
+         */
+        'X-API-Key'?: string | null;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/billing/subscription';
+};
+
+export type GetSubscriptionApiV1BillingSubscriptionGetErrors = {
+    /**
+     * Not found
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetSubscriptionApiV1BillingSubscriptionGetError = GetSubscriptionApiV1BillingSubscriptionGetErrors[keyof GetSubscriptionApiV1BillingSubscriptionGetErrors];
+
+export type GetSubscriptionApiV1BillingSubscriptionGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: SubscriptionResponse;
+};
+
+export type GetSubscriptionApiV1BillingSubscriptionGetResponse = GetSubscriptionApiV1BillingSubscriptionGetResponses[keyof GetSubscriptionApiV1BillingSubscriptionGetResponses];
+
+export type SubscribeApiV1BillingSubscribePostData = {
+    body: SubscribeRequest;
+    headers?: {
+        /**
+         * Authorization
+         */
+        authorization?: string | null;
+        /**
+         * X-Api-Key
+         */
+        'X-API-Key'?: string | null;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/billing/subscribe';
+};
+
+export type SubscribeApiV1BillingSubscribePostErrors = {
+    /**
+     * Not found
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type SubscribeApiV1BillingSubscribePostError = SubscribeApiV1BillingSubscribePostErrors[keyof SubscribeApiV1BillingSubscribePostErrors];
+
+export type SubscribeApiV1BillingSubscribePostResponses = {
+    /**
+     * Successful Response
+     */
+    200: CheckoutUrlResponse;
+};
+
+export type SubscribeApiV1BillingSubscribePostResponse = SubscribeApiV1BillingSubscribePostResponses[keyof SubscribeApiV1BillingSubscribePostResponses];
+
+export type ChangePlanApiV1BillingChangePlanPostData = {
+    body: SubscribeRequest;
+    headers?: {
+        /**
+         * Authorization
+         */
+        authorization?: string | null;
+        /**
+         * X-Api-Key
+         */
+        'X-API-Key'?: string | null;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/billing/change-plan';
+};
+
+export type ChangePlanApiV1BillingChangePlanPostErrors = {
+    /**
+     * Not found
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ChangePlanApiV1BillingChangePlanPostError = ChangePlanApiV1BillingChangePlanPostErrors[keyof ChangePlanApiV1BillingChangePlanPostErrors];
+
+export type ChangePlanApiV1BillingChangePlanPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: CheckoutUrlResponse;
+};
+
+export type ChangePlanApiV1BillingChangePlanPostResponse = ChangePlanApiV1BillingChangePlanPostResponses[keyof ChangePlanApiV1BillingChangePlanPostResponses];
+
+export type CancelSubscriptionApiV1BillingCancelPostData = {
+    body?: never;
+    headers?: {
+        /**
+         * Authorization
+         */
+        authorization?: string | null;
+        /**
+         * X-Api-Key
+         */
+        'X-API-Key'?: string | null;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/billing/cancel';
+};
+
+export type CancelSubscriptionApiV1BillingCancelPostErrors = {
+    /**
+     * Not found
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type CancelSubscriptionApiV1BillingCancelPostError = CancelSubscriptionApiV1BillingCancelPostErrors[keyof CancelSubscriptionApiV1BillingCancelPostErrors];
+
+export type CancelSubscriptionApiV1BillingCancelPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
+
+export type ListInvoicesApiV1BillingInvoicesGetData = {
+    body?: never;
+    headers?: {
+        /**
+         * Authorization
+         */
+        authorization?: string | null;
+        /**
+         * X-Api-Key
+         */
+        'X-API-Key'?: string | null;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/billing/invoices';
+};
+
+export type ListInvoicesApiV1BillingInvoicesGetErrors = {
+    /**
+     * Not found
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ListInvoicesApiV1BillingInvoicesGetError = ListInvoicesApiV1BillingInvoicesGetErrors[keyof ListInvoicesApiV1BillingInvoicesGetErrors];
+
+export type ListInvoicesApiV1BillingInvoicesGetResponses = {
+    /**
+     * Response List Invoices Api V1 Billing Invoices Get
+     *
+     * Successful Response
+     */
+    200: Array<InvoiceResponse>;
+};
+
+export type ListInvoicesApiV1BillingInvoicesGetResponse = ListInvoicesApiV1BillingInvoicesGetResponses[keyof ListInvoicesApiV1BillingInvoicesGetResponses];
+
 export type GetBalanceApiV1BillingBalanceGetData = {
     body?: never;
     headers?: {
@@ -8511,6 +9155,27 @@ export type StripeWebhookApiV1WebhooksStripePostErrors = {
 };
 
 export type StripeWebhookApiV1WebhooksStripePostResponses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
+
+export type RazorpayWebhookApiV1WebhooksRazorpayPostData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/webhooks/razorpay';
+};
+
+export type RazorpayWebhookApiV1WebhooksRazorpayPostErrors = {
+    /**
+     * Not found
+     */
+    404: unknown;
+};
+
+export type RazorpayWebhookApiV1WebhooksRazorpayPostResponses = {
     /**
      * Successful Response
      */

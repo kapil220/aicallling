@@ -5,6 +5,8 @@ production. Created orgs/users are removed on teardown. Requires the project's
 pgvector-enabled Postgres (docker-compose-local).
 """
 
+import uuid
+
 import pytest
 from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
@@ -30,12 +32,12 @@ async def real_db(setup_test_database):
 
     async def make_org_with_members(n=1):
         async with session_factory() as s:
-            org = OrganizationModel(provider_id=f"org_mem_{id(object())}")
+            org = OrganizationModel(provider_id=f"org_mem_{uuid.uuid4().hex}")
             s.add(org)
             await s.flush()
             users = []
             for i in range(n):
-                u = UserModel(provider_id=f"user_mem_{id(object())}_{i}")
+                u = UserModel(provider_id=f"user_mem_{uuid.uuid4().hex}_{i}")
                 s.add(u)
                 users.append(u)
             await s.flush()
@@ -62,9 +64,7 @@ async def real_db(setup_test_database):
                 )
             )
         if created_user_ids:
-            await s.execute(
-                delete(UserModel).where(UserModel.id.in_(created_user_ids))
-            )
+            await s.execute(delete(UserModel).where(UserModel.id.in_(created_user_ids)))
         await s.commit()
 
     db_client.engine = original_engine

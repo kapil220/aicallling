@@ -14,8 +14,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
-import { createMpsCreditPurchaseUrlApiV1OrganizationsUsageMpsCreditsPurchaseUrlPost, getBillingCreditsApiV1OrganizationsBillingCreditsGet, getLedgerApiV1BillingLedgerGet } from "@/client/sdk.gen";
-import type { LedgerEntryResponse, MpsBillingCreditsResponse, MpsCreditLedgerEntryResponse } from "@/client/types.gen";
+import { createMpsCreditPurchaseUrlApiV1OrganizationsUsageMpsCreditsPurchaseUrlPost, getBillingCreditsApiV1OrganizationsBillingCreditsGet, getLedgerApiV1BillingLedgerGet, listInvoicesApiV1BillingInvoicesGet } from "@/client/sdk.gen";
+import type { InvoiceResponse, LedgerEntryResponse, MpsBillingCreditsResponse, MpsCreditLedgerEntryResponse } from "@/client/types.gen";
+import { CurrentPlanCard } from "@/components/billing/CurrentPlanCard";
 import { MinutesRemainingCard } from "@/components/billing/MinutesRemainingCard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -120,6 +121,7 @@ export default function BillingPage() {
     const { config } = useAppConfig();
     const [credits, setCredits] = useState<MpsBillingCreditsResponse | null>(null);
     const [localLedger, setLocalLedger] = useState<LedgerEntryResponse[] | null>(null);
+    const [invoices, setInvoices] = useState<InvoiceResponse[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [purchasing, setPurchasing] = useState(false);
@@ -174,6 +176,12 @@ export default function BillingPage() {
                     throw new Error("Failed to fetch billing ledger");
                 }
                 setLocalLedger(response.data ?? []);
+                // Payment history is only present once payments are enabled;
+                // a 404 here just means no Razorpay yet — render nothing.
+                const invoicesResponse = await listInvoicesApiV1BillingInvoicesGet();
+                if (!invoicesResponse.error && invoicesResponse.data) {
+                    setInvoices(invoicesResponse.data);
+                }
                 return;
             }
 
@@ -281,7 +289,46 @@ export default function BillingPage() {
                     </Button>
                 </div>
 
+                <CurrentPlanCard />
+
                 <MinutesRemainingCard />
+
+                {invoices.length > 0 && (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Payment History</CardTitle>
+                            <CardDescription>Subscription charges on your plan.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="bg-card border rounded-lg overflow-x-auto shadow-sm">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow className="bg-muted/50">
+                                            <TableHead>Date</TableHead>
+                                            <TableHead>Status</TableHead>
+                                            <TableHead className="text-right">Amount</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {invoices.map((invoice) => (
+                                            <TableRow key={invoice.id}>
+                                                <TableCell>{invoice.created_at ? formatDate(invoice.created_at) : "-"}</TableCell>
+                                                <TableCell>
+                                                    <Badge variant={invoice.status === "captured" ? "secondary" : "destructive"}>
+                                                        {formatTitleCase(invoice.status)}
+                                                    </Badge>
+                                                </TableCell>
+                                                <TableCell className="text-right font-medium">
+                                                    {formatAmount(invoice.amount_cents, invoice.currency)}
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
 
                 <Card>
                     <CardHeader>

@@ -20,6 +20,7 @@ from api.schemas.ai_model_configuration import OrganizationAIModelConfigurationV
 from api.schemas.workflow import WorkflowRunResponseSchema
 from api.sdk_expose import sdk_expose
 from api.services.auth.depends import get_user, require_org_role
+from api.services.billing import plan_limits
 from api.services.configuration.ai_model_configuration import (
     WORKFLOW_MODEL_CONFIGURATION_V2_OVERRIDE_KEY,
     check_for_masked_keys_in_ai_model_configuration_v2,
@@ -378,6 +379,12 @@ async def create_workflow(
         request: The create workflow request
         user: The user to create the workflow for
     """
+    limit_error = await plan_limits.check_can_create_agent(
+        user.selected_organization_id
+    )
+    if limit_error:
+        raise HTTPException(status_code=402, detail=limit_error)
+
     # Auto-mint trigger_path for any trigger node that didn't ship one so
     # clients don't need to generate UUIDs themselves.
     workflow_definition = ensure_trigger_paths(request.workflow_definition)
@@ -461,6 +468,12 @@ async def create_workflow_from_template(
     Raises:
         HTTPException: If MPS API call fails
     """
+    limit_error = await plan_limits.check_can_create_agent(
+        user.selected_organization_id
+    )
+    if limit_error:
+        raise HTTPException(status_code=402, detail=limit_error)
+
     try:
         # Call MPS API to generate workflow using the client
         if DEPLOYMENT_MODE == "oss":
@@ -1487,6 +1500,11 @@ async def duplicate_workflow_template(
     Returns:
         The newly created workflow
     """
+    limit_error = await plan_limits.check_can_create_agent(
+        user.selected_organization_id
+    )
+    if limit_error:
+        raise HTTPException(status_code=402, detail=limit_error)
     template_client = WorkflowTemplateClient()
     template = await template_client.get_workflow_template(request.template_id)
 

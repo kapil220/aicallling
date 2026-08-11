@@ -1,4 +1,7 @@
 """Requires pgvector Postgres (docker-compose-local)."""
+
+import uuid
+
 import pytest
 from httpx import ASGITransport, AsyncClient
 
@@ -12,11 +15,11 @@ async def _org_with_member_and_admin():
     from api.db.database import async_session
 
     async with async_session() as s:
-        org = OrganizationModel(provider_id=f"org_cred_{id(object())}")
+        org = OrganizationModel(provider_id=f"org_cred_{uuid.uuid4().hex}")
         s.add(org)
         await s.flush()
-        member = UserModel(provider_id=f"cred_member_{id(object())}")
-        admin = UserModel(provider_id=f"cred_admin_{id(object())}")
+        member = UserModel(provider_id=f"cred_member_{uuid.uuid4().hex}")
+        admin = UserModel(provider_id=f"cred_admin_{uuid.uuid4().hex}")
         s.add_all([member, admin])
         await s.flush()
         await s.commit()
@@ -33,7 +36,9 @@ async def _org_with_member_and_admin():
 async def test_member_cannot_delete_credential():
     org_id, member, _admin = await _org_with_member_and_admin()
     app.dependency_overrides[get_user_with_selected_organization] = lambda: type(
-        "U", (), {"id": member.id, "selected_organization_id": org_id, "is_superuser": False}
+        "U",
+        (),
+        {"id": member.id, "selected_organization_id": org_id, "is_superuser": False},
     )()
     try:
         transport = ASGITransport(app=app)

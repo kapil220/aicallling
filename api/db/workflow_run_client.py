@@ -518,3 +518,17 @@ class WorkflowRunClient(BaseDBClient):
                 .limit(1)
             )
             return result.scalars().first()
+
+    async def count_org_runs_since(self, organization_id: int, since) -> int:
+        """Workflow runs created for an org since a timestamp (daily-cap check)."""
+        async with self.async_session() as session:
+            result = await session.execute(
+                select(func.count())
+                .select_from(WorkflowRunModel)
+                .join(WorkflowModel, WorkflowRunModel.workflow_id == WorkflowModel.id)
+                .where(
+                    WorkflowModel.organization_id == organization_id,
+                    WorkflowRunModel.created_at >= since,
+                )
+            )
+            return int(result.scalar_one())
