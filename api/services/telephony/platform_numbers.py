@@ -84,7 +84,9 @@ async def _ensure_subaccount(organization_id: int) -> dict:
         "auth_token": sub["auth_token"],
         "from_numbers": [],
     }
-    await db_client.create_platform_telephony_configuration(organization_id, credentials)
+    await db_client.create_platform_telephony_configuration(
+        organization_id, credentials
+    )
     return credentials
 
 

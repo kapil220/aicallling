@@ -33,14 +33,16 @@ def upgrade() -> None:
         "telephony_phone_numbers", sa.Column("provider_sid", sa.String(), nullable=True)
     )
     op.add_column(
-        "telephony_phone_numbers", sa.Column("rental_cents", sa.Integer(), nullable=True)
+        "telephony_phone_numbers",
+        sa.Column("rental_cents", sa.Integer(), nullable=True),
     )
     op.add_column(
         "telephony_phone_numbers",
         sa.Column("next_renewal_at", sa.DateTime(timezone=True), nullable=True),
     )
     op.add_column(
-        "telephony_phone_numbers", sa.Column("rental_status", sa.String(), nullable=True)
+        "telephony_phone_numbers",
+        sa.Column("rental_status", sa.String(), nullable=True),
     )
     op.create_index(
         "ix_telephony_phone_numbers_platform_renewal",
