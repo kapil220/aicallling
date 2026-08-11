@@ -32,10 +32,16 @@ def upgrade() -> None:
         sa.Column("daily_call_cap", sa.Integer(), nullable=True),
         sa.Column("max_active_campaigns", sa.Integer(), nullable=True),
         sa.Column("razorpay_plan_id", sa.String(), nullable=True),
-        sa.Column("is_active", sa.Boolean(), nullable=False, server_default=sa.text("true")),
+        sa.Column(
+            "is_active", sa.Boolean(), nullable=False, server_default=sa.text("true")
+        ),
         sa.Column("sort_order", sa.Integer(), nullable=False, server_default="0"),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()")),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()")),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), server_default=sa.text("now()")
+        ),
+        sa.Column(
+            "updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()")
+        ),
         sa.UniqueConstraint("tier_key", name="_plans_tier_key_uc"),
     )
     op.create_index("ix_plans_active", "plans", ["is_active"])
@@ -49,7 +55,9 @@ def upgrade() -> None:
         sa.Column("amount_cents", sa.Integer(), nullable=False),
         sa.Column("currency", sa.String(), nullable=False, server_default="inr"),
         sa.Column("status", sa.String(), nullable=False, server_default="captured"),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()")),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), server_default=sa.text("now()")
+        ),
         sa.ForeignKeyConstraint(
             ["organization_id"], ["organizations.id"], ondelete="CASCADE"
         ),
@@ -69,7 +77,8 @@ def upgrade() -> None:
         ondelete="SET NULL",
     )
     op.add_column(
-        "organizations", sa.Column("razorpay_subscription_id", sa.String(), nullable=True)
+        "organizations",
+        sa.Column("razorpay_subscription_id", sa.String(), nullable=True),
     )
     op.create_index(
         "ix_organizations_razorpay_subscription_id",
@@ -144,7 +153,9 @@ def upgrade() -> None:
 def downgrade() -> None:
     op.drop_column("organizations", "current_period_end")
     op.drop_column("organizations", "subscription_status")
-    op.drop_index("ix_organizations_razorpay_subscription_id", table_name="organizations")
+    op.drop_index(
+        "ix_organizations_razorpay_subscription_id", table_name="organizations"
+    )
     op.drop_column("organizations", "razorpay_subscription_id")
     op.drop_constraint("fk_organizations_plan_id", "organizations", type_="foreignkey")
     op.drop_column("organizations", "plan_id")

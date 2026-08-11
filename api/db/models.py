@@ -178,7 +178,9 @@ class OrganizationModel(Base):
 
     # Phase 2 (saas): subscription plan linkage. Lifecycle states mirror
     # Razorpay: None (never subscribed / trial) | active | halted | cancelled.
-    plan_id = Column(Integer, ForeignKey("plans.id", ondelete="SET NULL"), nullable=True)
+    plan_id = Column(
+        Integer, ForeignKey("plans.id", ondelete="SET NULL"), nullable=True
+    )
     razorpay_subscription_id = Column(String, unique=True, nullable=True, index=True)
     subscription_status = Column(String, nullable=True)
     current_period_end = Column(DateTime(timezone=True), nullable=True)
@@ -313,14 +315,20 @@ class PlanModel(Base):
     currency = Column(String, nullable=False, default="inr", server_default="inr")
     included_minutes = Column(Integer, nullable=False)
     max_agents = Column(Integer, nullable=True)
-    max_concurrent_calls = Column(Integer, nullable=False, default=2, server_default="2")
+    max_concurrent_calls = Column(
+        Integer, nullable=False, default=2, server_default="2"
+    )
     daily_call_cap = Column(Integer, nullable=True)
     max_active_campaigns = Column(Integer, nullable=True)
     razorpay_plan_id = Column(String, nullable=True)
-    is_active = Column(Boolean, nullable=False, default=True, server_default=text("true"))
+    is_active = Column(
+        Boolean, nullable=False, default=True, server_default=text("true")
+    )
     sort_order = Column(Integer, nullable=False, default=0, server_default="0")
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
     __table_args__ = (
         UniqueConstraint("tier_key", name="_plans_tier_key_uc"),
@@ -341,7 +349,9 @@ class SubscriptionInvoiceModel(Base):
     razorpay_subscription_id = Column(String, nullable=True)
     amount_cents = Column(Integer, nullable=False)
     currency = Column(String, nullable=False, default="inr", server_default="inr")
-    status = Column(String, nullable=False, default="captured", server_default="captured")
+    status = Column(
+        String, nullable=False, default="captured", server_default="captured"
+    )
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     __table_args__ = (

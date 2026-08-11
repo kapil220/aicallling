@@ -45,10 +45,13 @@ def _saas(enabled: bool):
 
 async def test_agent_limit_blocks_at_cap(real_db):
     org = await real_db("org_enf_agents")  # trial -> max_agents = 3
-    with _saas(True), patch.object(
-        db_client,
-        "get_workflow_counts",
-        AsyncMock(return_value={"total": 3, "active": 3, "archived": 0}),
+    with (
+        _saas(True),
+        patch.object(
+            db_client,
+            "get_workflow_counts",
+            AsyncMock(return_value={"total": 3, "active": 3, "archived": 0}),
+        ),
     ):
         err = await plan_limits.check_can_create_agent(org.id)
     assert err is not None
@@ -57,10 +60,13 @@ async def test_agent_limit_blocks_at_cap(real_db):
 
 async def test_agent_limit_allows_under_cap(real_db):
     org = await real_db("org_enf_agents_ok")
-    with _saas(True), patch.object(
-        db_client,
-        "get_workflow_counts",
-        AsyncMock(return_value={"total": 2, "active": 2, "archived": 0}),
+    with (
+        _saas(True),
+        patch.object(
+            db_client,
+            "get_workflow_counts",
+            AsyncMock(return_value={"total": 2, "active": 2, "archived": 0}),
+        ),
     ):
         assert await plan_limits.check_can_create_agent(org.id) is None
 
@@ -68,18 +74,22 @@ async def test_agent_limit_allows_under_cap(real_db):
 async def test_agent_limit_unlimited_for_scale(real_db):
     scale = await db_client.get_plan_by_tier_key("scale")
     org = await real_db("org_enf_scale", plan_id=scale.id)
-    with _saas(True), patch.object(
-        db_client,
-        "get_workflow_counts",
-        AsyncMock(return_value={"total": 999, "active": 999, "archived": 0}),
+    with (
+        _saas(True),
+        patch.object(
+            db_client,
+            "get_workflow_counts",
+            AsyncMock(return_value={"total": 999, "active": 999, "archived": 0}),
+        ),
     ):
         assert await plan_limits.check_can_create_agent(org.id) is None
 
 
 async def test_campaign_limit_blocks_at_cap(real_db):
     org = await real_db("org_enf_campaigns")  # trial -> max_active_campaigns = 1
-    with _saas(True), patch.object(
-        db_client, "count_active_campaigns", AsyncMock(return_value=1)
+    with (
+        _saas(True),
+        patch.object(db_client, "count_active_campaigns", AsyncMock(return_value=1)),
     ):
         err = await plan_limits.check_can_start_campaign(org.id)
     assert err is not None
@@ -88,8 +98,9 @@ async def test_campaign_limit_blocks_at_cap(real_db):
 
 async def test_campaign_limit_allows_under_cap(real_db):
     org = await real_db("org_enf_campaigns_ok")
-    with _saas(True), patch.object(
-        db_client, "count_active_campaigns", AsyncMock(return_value=0)
+    with (
+        _saas(True),
+        patch.object(db_client, "count_active_campaigns", AsyncMock(return_value=0)),
     ):
         assert await plan_limits.check_can_start_campaign(org.id) is None
 

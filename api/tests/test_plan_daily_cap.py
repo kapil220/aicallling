@@ -46,8 +46,9 @@ def _saas(enabled: bool):
 
 async def test_daily_cap_blocks_at_cap(real_db):
     org = await real_db("org_cap_hit")  # trial -> daily_call_cap = 20
-    with _saas(True), patch.object(
-        db_client, "count_org_runs_since", AsyncMock(return_value=20)
+    with (
+        _saas(True),
+        patch.object(db_client, "count_org_runs_since", AsyncMock(return_value=20)),
     ):
         err = await plan_limits.check_daily_call_cap(org.id)
     assert err is not None
@@ -56,8 +57,9 @@ async def test_daily_cap_blocks_at_cap(real_db):
 
 async def test_daily_cap_allows_under(real_db):
     org = await real_db("org_cap_ok")
-    with _saas(True), patch.object(
-        db_client, "count_org_runs_since", AsyncMock(return_value=5)
+    with (
+        _saas(True),
+        patch.object(db_client, "count_org_runs_since", AsyncMock(return_value=5)),
     ):
         assert await plan_limits.check_daily_call_cap(org.id) is None
 
@@ -65,8 +67,9 @@ async def test_daily_cap_allows_under(real_db):
 async def test_daily_cap_unlimited_scale(real_db):
     scale = await db_client.get_plan_by_tier_key("scale")
     org = await real_db("org_cap_scale", plan_id=scale.id)
-    with _saas(True), patch.object(
-        db_client, "count_org_runs_since", AsyncMock(return_value=10_000)
+    with (
+        _saas(True),
+        patch.object(db_client, "count_org_runs_since", AsyncMock(return_value=10_000)),
     ):
         assert await plan_limits.check_daily_call_cap(org.id) is None
 
