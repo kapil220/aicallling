@@ -45,8 +45,8 @@ from api.tasks.campaign_tasks import (
     process_campaign_batch,
     sync_campaign_source,
 )
-from api.tasks.rental_billing import charge_number_rentals
 from api.tasks.knowledge_base_processing import process_knowledge_base_document
+from api.tasks.rental_billing import charge_number_rentals
 from api.tasks.run_integrations import run_integrations_post_workflow_run
 from api.tasks.s3_upload import upload_voicemail_audio_to_s3
 from api.tasks.workflow_completion import process_workflow_completion
