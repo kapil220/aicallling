@@ -1,5 +1,7 @@
 """Requires pgvector Postgres (docker-compose-local)."""
 
+import uuid
+
 import pytest
 from httpx import ASGITransport, AsyncClient
 
@@ -14,10 +16,10 @@ async def test_member_cannot_archive_workflow():
     from api.db.database import async_session
 
     async with async_session() as s:
-        org = OrganizationModel(provider_id=f"org_wf_{id(object())}")
+        org = OrganizationModel(provider_id=f"org_wf_{uuid.uuid4().hex}")
         s.add(org)
         await s.flush()
-        member = UserModel(provider_id=f"wf_member_{id(object())}")
+        member = UserModel(provider_id=f"wf_member_{uuid.uuid4().hex}")
         s.add(member)
         await s.flush()
         await s.commit()
