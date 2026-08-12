@@ -229,3 +229,15 @@ OSS_JWT_SECRET = os.getenv("OSS_JWT_SECRET", "change-me-in-production")
 OSS_JWT_EXPIRY_HOURS = int(os.getenv("OSS_JWT_EXPIRY_HOURS", "720"))  # 30 days
 
 TUNER_BASE_URL = os.getenv("TUNER_BASE_URL", "https://api.usetuner.ai")
+
+# Phase 4a (saas): credential encryption at rest. Comma-separated list of
+# urlsafe-base64 32-byte Fernet keys. The first key encrypts; every key is
+# tried when decrypting, which is what makes rotation a restart rather than a
+# migration. Unset means encryption is off and credentials are stored exactly
+# as they were before phase 4a — supported for OSS, rejected in saas mode by
+# validate_saas_config.
+CREDENTIAL_ENCRYPTION_KEYS = [
+    k.strip()
+    for k in os.getenv("CREDENTIAL_ENCRYPTION_KEYS", "").split(",")
+    if k.strip()
+]

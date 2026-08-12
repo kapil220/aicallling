@@ -4,6 +4,64 @@ from sqlalchemy.future import select
 
 from api.db.base_client import BaseDBClient
 from api.db.models import OrganizationConfigurationModel
+from api.enums import OrganizationConfigurationKey
+from api.services.security import credential_crypto
+
+# ``organization_configurations.value`` is a mixed bag keyed by ``key``: only
+# these four carry secrets. The rest — disposition mappings, call limits, org
+# preferences — are ordinary configuration and stay readable in the database
+# for operations and debugging.
+#
+# MODEL_CONFIGURATION_V2 matters most: seed_platform_model_configuration copies
+# the platform's own OpenAI/Deepgram/ElevenLabs keys into *every* org's row, so
+# it is the highest-blast-radius secret we store.
+#
+# This is handled here rather than by EncryptedJSON because the decision
+# depends on the sibling ``key`` column, which a TypeDecorator never sees.
+SECRET_CONFIG_KEYS = frozenset(
+    {
+        OrganizationConfigurationKey.TELEPHONY_CONFIGURATION.value,
+        OrganizationConfigurationKey.TWILIO_CONFIGURATION.value,
+        OrganizationConfigurationKey.LANGFUSE_CREDENTIALS.value,
+        OrganizationConfigurationKey.MODEL_CONFIGURATION_V2.value,
+    }
+)
+
+
+def _encrypt_for_key(key: str, value: Any) -> Any:
+    """Encrypt only the key types that hold secrets."""
+    if key not in SECRET_CONFIG_KEYS:
+        return value
+    return credential_crypto.encrypt_json(value)
+
+
+def _decrypted_value(config: Optional[OrganizationConfigurationModel]) -> Any:
+    """Plaintext value of a row, whatever its storage state.
+
+    Content-sniffed, so rows mid-backfill and rows in a deployment with no key
+    configured both read correctly.
+    """
+    if config is None:
+        return None
+    return credential_crypto.decrypt_json(config.value)
+
+
+def _decrypt_in_place(
+    config: OrganizationConfigurationModel,
+) -> OrganizationConfigurationModel:
+    """Swap a detached row's ciphertext for plaintext before it leaves the client.
+
+    Callers receive the ORM object itself, so decrypting on the way out is what
+    keeps encryption invisible to every consumer of ``.value``.
+    """
+    config.value = credential_crypto.decrypt_json(config.value)
+    return config
+
+
+def _decrypt_optional(
+    config: Optional[OrganizationConfigurationModel],
+) -> Optional[OrganizationConfigurationModel]:
+    return _decrypt_in_place(config) if config is not None else None
 
 
 class OrganizationConfigurationClient(BaseDBClient):
@@ -18,7 +76,8 @@ class OrganizationConfigurationClient(BaseDBClient):
                     OrganizationConfigurationModel.key == key,
                 )
             )
-            return result.scalars().first()
+            config = result.scalars().first()
+        return _decrypt_optional(config)
 
     async def get_all_configurations(
         self, organization_id: int
@@ -30,7 +89,8 @@ class OrganizationConfigurationClient(BaseDBClient):
                     OrganizationConfigurationModel.organization_id == organization_id
                 )
             )
-            return result.scalars().all()
+            configs = list(result.scalars().all())
+        return [_decrypt_in_place(c) for c in configs]
 
     async def upsert_configuration(
         self, organization_id: int, key: str, value: Any
@@ -46,15 +106,16 @@ class OrganizationConfigurationClient(BaseDBClient):
             )
             config = result.scalars().first()
 
+            stored = _encrypt_for_key(key, value)
             if config:
                 # Update existing configuration
-                config.value = value
+                config.value = stored
             else:
                 # Create new configuration
                 config = OrganizationConfigurationModel(
                     organization_id=organization_id,
                     key=key,
-                    value=value,
+                    value=stored,
                 )
                 session.add(config)
 
@@ -64,7 +125,8 @@ class OrganizationConfigurationClient(BaseDBClient):
                 await session.rollback()
                 raise e
             await session.refresh(config)
-            return config
+        # Hand back the plaintext the caller passed in, not what we stored.
+        return _decrypt_in_place(config)
 
     async def delete_configuration(self, organization_id: int, key: str) -> bool:
         """Delete a configuration for an organization."""
@@ -92,6 +154,7 @@ class OrganizationConfigurationClient(BaseDBClient):
         self, organization_id: int, key: str, default: Any = None
     ) -> Any:
         """Get the value of a configuration, returning default if not found."""
+        # get_configuration has already decrypted.
         config = await self.get_configuration(organization_id, key)
         return config.value if config else default
 
@@ -106,14 +169,14 @@ class OrganizationConfigurationClient(BaseDBClient):
                     OrganizationConfigurationModel.key == key,
                 )
             )
-            return [
+            rows = [
                 {
                     "organization_id": config.organization_id,
-                    "value": config.value,
+                    "value": _decrypted_value(config),
                 }
                 for config in result.scalars().all()
-                if config.value
             ]
+            return [row for row in rows if row["value"]]
 
     async def get_configurations_by_provider(
         self, key: str, provider: str
@@ -130,11 +193,17 @@ class OrganizationConfigurationClient(BaseDBClient):
             )
             configs = result.scalars().all()
 
-            return [
+            # The provider filter has to run on plaintext — once encrypted this
+            # value is an opaque token with no readable "provider" field.
+            rows = [
                 {
                     "organization_id": config.organization_id,
-                    "value": config.value,
+                    "value": _decrypted_value(config),
                 }
                 for config in configs
-                if config.value and config.value.get("provider") == provider
+            ]
+            return [
+                row
+                for row in rows
+                if row["value"] and row["value"].get("provider") == provider
             ]
