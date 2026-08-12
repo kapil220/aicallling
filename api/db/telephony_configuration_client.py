@@ -19,6 +19,31 @@ class TelephonyConfigurationInUseError(Exception):
     """Raised when deleting a config that is still referenced by a campaign."""
 
 
+def _resolve_account_id(provider: str, credentials: Dict[str, Any]) -> Optional[str]:
+    """Pull the provider's account identifier out of a credentials dict.
+
+    Kept denormalized on the row because inbound dispatch matches on it in SQL
+    and ``credentials`` is a ciphertext blob once encryption is enabled. An
+    account id is an identifier, not a secret — the auth token stored beside it
+    is — so giving it its own column is not a weakening.
+
+    Returns None for providers with no account concept (e.g. ARI), which route
+    inbound through a different path.
+    """
+    # Imported lazily: the provider packages reach back into db/ and service
+    # code, so importing the registry at module scope would cycle.
+    from api.services.telephony import (
+        providers,  # noqa: F401  -- registration
+        registry,
+    )
+
+    spec = registry.get_optional(provider)
+    if not spec or not spec.account_id_credential_field:
+        return None
+    value = (credentials or {}).get(spec.account_id_credential_field)
+    return str(value) if value else None
+
+
 class TelephonyConfigurationClient(BaseDBClient):
     async def list_telephony_configurations(
         self, organization_id: int
@@ -82,26 +107,27 @@ class TelephonyConfigurationClient(BaseDBClient):
 
         Used by the org-warnings endpoint to surface a UI nudge until customers
         paste their portal-issued public key.
+
+        Filtered in Python rather than in SQL because ``credentials`` may be
+        encrypted. Unlike the account id, a webhook public key is
+        secret-adjacent and is not denormalized into its own column. This is a
+        per-org count over a handful of rows feeding a warnings endpoint, so
+        loading them is equivalent in practice.
         """
         async with self.async_session() as session:
             result = await session.execute(
-                select(func.count(TelephonyConfigurationModel.id)).where(
+                select(TelephonyConfigurationModel).where(
                     TelephonyConfigurationModel.organization_id == organization_id,
                     TelephonyConfigurationModel.provider == "telnyx",
-                    (
-                        TelephonyConfigurationModel.credentials.op("->>")(
-                            "webhook_public_key"
-                        ).is_(None)
-                    )
-                    | (
-                        TelephonyConfigurationModel.credentials.op("->>")(
-                            "webhook_public_key"
-                        )
-                        == ""
-                    ),
                 )
             )
-            return int(result.scalar() or 0)
+            configs = result.scalars().all()
+
+        return sum(
+            1
+            for config in configs
+            if not (config.credentials or {}).get("webhook_public_key")
+        )
 
     async def list_all_telephony_configurations_by_provider(
         self, provider: str
@@ -145,6 +171,7 @@ class TelephonyConfigurationClient(BaseDBClient):
                 name=name,
                 provider=provider,
                 credentials=credentials,
+                account_id=_resolve_account_id(provider, credentials),
                 is_default_outbound=is_default_outbound,
             )
             session.add(row)
@@ -172,6 +199,7 @@ class TelephonyConfigurationClient(BaseDBClient):
                 row.name = name
             if credentials is not None:
                 row.credentials = credentials
+                row.account_id = _resolve_account_id(row.provider, credentials)
 
             try:
                 await session.commit()

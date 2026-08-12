@@ -138,7 +138,7 @@ class TelephonyPhoneNumberClient(BaseDBClient):
 
         One SQL roundtrip that joins ``telephony_configurations`` and
         ``telephony_phone_numbers`` and matches all of:
-        provider, ``credentials[account_id_field] == account_id``,
+        provider, ``config.account_id == account_id``,
         ``phone.address_normalized == canonical(to_number)``, and
         ``phone.is_active``. Replaces the previous pattern of resolving the
         config and the phone number in two separate queries with a Python-side
@@ -147,6 +147,12 @@ class TelephonyPhoneNumberClient(BaseDBClient):
         Returns ``(config, phone_number)`` or None when the primary path
         misses (e.g. legacy non-E.164 stored addresses); the caller should
         fall back to the fuzzy ``numbers_match`` path in that case.
+
+        ``account_id_field`` is still accepted — an empty one means the
+        provider has no account concept (e.g. ARI) and there is nothing to
+        match — but the comparison itself now runs against the denormalized
+        ``account_id`` column rather than the ``credentials`` JSON, which is
+        encrypted and unreadable in SQL.
         """
         if not (provider and account_id_field and account_id and to_number):
             return None
@@ -163,8 +169,7 @@ class TelephonyPhoneNumberClient(BaseDBClient):
                 )
                 .where(
                     TelephonyConfigurationModel.provider == provider,
-                    TelephonyConfigurationModel.credentials.op("->>")(account_id_field)
-                    == account_id,
+                    TelephonyConfigurationModel.account_id == account_id,
                     TelephonyPhoneNumberModel.address_normalized
                     == normalized.canonical,
                     TelephonyPhoneNumberModel.is_active.is_(True),
@@ -188,9 +193,13 @@ class TelephonyPhoneNumberClient(BaseDBClient):
         address: str,
         country_hint: Optional[str] = None,
     ) -> Optional[Tuple[TelephonyConfigurationModel, TelephonyPhoneNumberModel]]:
-        """Inbound dispatch keys on (provider, credentials[account_id_field],
+        """Inbound dispatch keys on (provider, config.account_id,
         address_normalized) — see ``find_inbound_route_by_account``. That tuple
         must be globally unique or two orgs would race for the same call.
+
+        Since phase 4a a partial unique index enforces that invariant in the
+        database as well. This check stays because it can name the conflicting
+        row and org, which an IntegrityError cannot.
 
         Returns the conflicting (config, phone_number) — possibly in another
         org — when inserting a row with this combination would break that
@@ -213,8 +222,7 @@ class TelephonyPhoneNumberClient(BaseDBClient):
                 )
                 .where(
                     TelephonyConfigurationModel.provider == provider,
-                    TelephonyConfigurationModel.credentials.op("->>")(account_id_field)
-                    == account_id,
+                    TelephonyConfigurationModel.account_id == account_id,
                     TelephonyPhoneNumberModel.address_normalized
                     == normalized.canonical,
                 )

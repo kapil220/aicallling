@@ -22,6 +22,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import declarative_base, relationship
 
 from api.constants import DEFAULT_CAMPAIGN_RETRY_CONFIG
+from api.db.types import EncryptedJSON
 
 from ..enums import (
     CallType,
@@ -468,7 +469,12 @@ class TelephonyConfigurationModel(Base):
     )
     name = Column(String(64), nullable=False)
     provider = Column(String(32), nullable=False)
-    credentials = Column(JSON, nullable=False, default=dict)
+    credentials = Column(EncryptedJSON, nullable=False, default=dict)
+    # Denormalized copy of credentials[<provider account id field>]. Inbound
+    # dispatch resolves the owning org by this on every call, which it cannot
+    # do once `credentials` is a ciphertext blob. NULL for providers with no
+    # account concept (e.g. ARI), which route inbound differently.
+    account_id = Column(String, nullable=True, index=True)
     is_default_outbound = Column(
         Boolean, nullable=False, default=False, server_default=text("false")
     )
@@ -596,7 +602,7 @@ class IntegrationModel(Base):
     created_by = Column(Integer, ForeignKey("users.id"))
     is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
-    connection_details = Column(JSON, nullable=False, default=dict)
+    connection_details = Column(EncryptedJSON, nullable=False, default=dict)
     action = Column(String, nullable=False, default=IntegrationAction.ALL_CALLS.value)
 
     # Relationships
@@ -1242,13 +1248,13 @@ class ExternalCredentialModel(Base):
         default=WebhookCredentialType.NONE.value,
     )
 
-    # Encrypted credential data (JSON)
+    # Credential data, encrypted at rest when CREDENTIAL_ENCRYPTION_KEYS is set.
     # Structure depends on credential_type:
     # - api_key: {"header_name": "X-API-Key", "api_key": "value"}
     # - bearer_token: {"token": "value"}
     # - basic_auth: {"username": "user", "password": "value"}
     # - custom_header: {"header_name": "X-Custom", "header_value": "value"}
-    credential_data = Column(JSON, nullable=False, default=dict)
+    credential_data = Column(EncryptedJSON, nullable=False, default=dict)
 
     # Audit fields
     created_by = Column(Integer, ForeignKey("users.id"), nullable=False)

@@ -1,7 +1,24 @@
 import pytest
+from cryptography.fernet import Fernet
+
+from api import constants
+from api.services.security import credential_crypto
+
+
+@pytest.fixture(autouse=True)
+def _reset_cipher():
+    credential_crypto.reset_cipher_cache()
+    yield
+    credential_crypto.reset_cipher_cache()
+
+
+def _set_credential_keys(monkeypatch, keys):
+    monkeypatch.setattr(constants, "CREDENTIAL_ENCRYPTION_KEYS", list(keys))
+    credential_crypto.reset_cipher_cache()
 
 
 def _set_valid_saas_env(monkeypatch):
+    _set_credential_keys(monkeypatch, [Fernet.generate_key().decode()])
     monkeypatch.setattr("api.services.saas_config.DEPLOYMENT_MODE", "saas")
     monkeypatch.setattr("api.services.saas_config.AUTH_PROVIDER", "clerk")
     monkeypatch.setattr("api.services.saas_config.BILLING_ENGINE", "local")
@@ -47,3 +64,32 @@ def test_invalid_saas_config_fails(monkeypatch, attr, bad_value, fragment):
     monkeypatch.setattr(f"api.services.saas_config.{attr}", bad_value)
     with pytest.raises(RuntimeError, match=fragment):
         validate_saas_config()
+
+
+def test_saas_mode_requires_a_credential_encryption_key(monkeypatch):
+    """Optional for OSS self-hosters; a launch blocker for a hosted deployment."""
+    from api.services.saas_config import validate_saas_config
+
+    _set_valid_saas_env(monkeypatch)
+    _set_credential_keys(monkeypatch, [])
+
+    with pytest.raises(RuntimeError, match="CREDENTIAL_ENCRYPTION_KEYS"):
+        validate_saas_config()
+
+
+def test_saas_mode_rejects_a_malformed_credential_encryption_key(monkeypatch):
+    from api.services.saas_config import validate_saas_config
+
+    _set_valid_saas_env(monkeypatch)
+    _set_credential_keys(monkeypatch, ["not-a-fernet-key"])
+
+    with pytest.raises(RuntimeError, match="CREDENTIAL_ENCRYPTION_KEYS"):
+        validate_saas_config()
+
+
+def test_oss_mode_does_not_require_a_credential_encryption_key(monkeypatch):
+    from api.services.saas_config import validate_saas_config
+
+    monkeypatch.setattr("api.services.saas_config.DEPLOYMENT_MODE", "oss")
+    _set_credential_keys(monkeypatch, [])
+    validate_saas_config()
