@@ -1979,11 +1979,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
     ```python
     params = DailyParams(
-          video_out_enabled=True,
-          video_out_is_live=True,
-          video_out_width=1280,
-          video_out_height=720,
-          video_out_destinations=["screenVideo"]
+        video_out_enabled=True,
+        video_out_is_live=True,
+        video_out_width=1280,
+        video_out_height=720,
+        video_out_destinations=["screenVideo"],
     )
 
     ...
@@ -2001,9 +2001,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     params = DailyParams(
         camera_out_send_settings={
             "maxQuality": "high",
-            "encodings": {
-                "high": {"maxBitrate": 2_000_000, "maxFramerate": 30}
-            },
+            "encodings": {"high": {"maxBitrate": 2_000_000, "maxFramerate": 30}},
         },
     )
     ```
@@ -3567,6 +3565,7 @@ Migration guide: https://docs.pipecat.ai/pipecat/migration/migration-1.0
 
     context = LLMContext()
 
+
     @transport.event_handler("on_client_connected")
     async def on_client_connected(transport, client):
         context.add_message({"role": "user", "content": "Please introduce yourself."})
@@ -3804,17 +3803,13 @@ Migration guide: https://docs.pipecat.ai/pipecat/migration/migration-1.0
     Instead of, say:
 
     ```python
-    await task.queue_frame(
-        STTUpdateSettingsFrame(settings={"language": Language.ES})
-    )
+    await task.queue_frame(STTUpdateSettingsFrame(settings={"language": Language.ES}))
     ```
 
     you'd do:
 
     ```python
-    await task.queue_frame(
-        STTUpdateSettingsFrame(delta=DeepgramSTTSettings(language=Language.ES))
-    )
+    await task.queue_frame(STTUpdateSettingsFrame(delta=DeepgramSTTSettings(language=Language.ES)))
     ```
 
   Each service now vends strongly-typed classes like `DeepgramSTTSettings`
@@ -5147,7 +5142,8 @@ Migration guide: https://docs.pipecat.ai/pipecat/migration/migration-1.0
       user_params=LLMUserAggregatorParams(
           user_turn_strategies=UserTurnStrategies(
               stop=[
-                  TurnAnalyzerUserTurnStopStrategy(turn_analyzer=LocalSmartTurnAnalyzerV3(params=SmartTurnParams())
+                  TurnAnalyzerUserTurnStopStrategy(
+                      turn_analyzer=LocalSmartTurnAnalyzerV3(params=SmartTurnParams())
                   )
               ],
           )
@@ -5306,8 +5302,7 @@ PIPECAT_SETUP_FILES="setup1.py:setup.py:..."`). Each file must define a
   function with the following signature:
 
   ```python
-  async def setup_pipeline_task(task: PipelineTask):
-      ...
+  async def setup_pipeline_task(task: PipelineTask): ...
   ```
 
   (PR [#3397](https://github.com/pipecat-ai/pipecat/pull/3397))
@@ -5341,10 +5336,9 @@ PIPECAT_SETUP_FILES="setup1.py:setup.py:..."`). Each file must define a
   `include_language_detection` parameter to detect language.
 
   ```python
-    stt = ElevenLabsRealtimeSTTService(
-        api_key=os.getenv("ELEVENLABS_API_KEY"),
-        include_language_detection=True
-    )
+  stt = ElevenLabsRealtimeSTTService(
+      api_key=os.getenv("ELEVENLABS_API_KEY"), include_language_detection=True
+  )
   ```
 
   (PR [#3216](https://github.com/pipecat-ai/pipecat/pull/3216))
@@ -6156,7 +6150,7 @@ PIPECAT_SETUP_FILES="setup1.py:setup.py:..."`). Each file must define a
     ```python
     aggregation = myAggregator.aggregate(text)
     if aggregation:
-      print(f"successfully aggregated text: {aggregation.text}")
+        print(f"successfully aggregated text: {aggregation.text}")
     ```
 
   - `SimpleTextAggregator`, `SkipTagsAggregator`, `PatternPairAggregator`
@@ -6423,8 +6417,7 @@ PIPECAT_SETUP_FILES="setup1.py:setup.py:..."`). Each file must define a
   file must define a function with the following signature:
 
   ```python
-  async def create_observers(task: PipelineTask) -> Iterable[BaseObserver]:
-      ...
+  async def create_observers(task: PipelineTask) -> Iterable[BaseObserver]: ...
   ```
 
 - Added support for new sonic-3 languages in `CartesiaTTSService` and
@@ -6544,7 +6537,7 @@ PIPECAT_SETUP_FILES="setup1.py:setup.py:..."`). Each file must define a
   example, when creating `LLMMessagesAppendFrame`:
 
   ```python
-  message = LLMContext.create_image_message(image=..., size= ...)
+  message = LLMContext.create_image_message(image=..., size=...)
   await self.push_frame(LLMMessagesAppendFrame(messages=[message], run_llm=True))
   ```
 
@@ -6575,22 +6568,19 @@ PIPECAT_SETUP_FILES="setup1.py:setup.py:..."`). Each file must define a
 
   ```python
   pipeline = Pipeline(
-    [
-      transport.input(),
-      context_aggregator.user(),
-
-      # BEFORE
-      llm,
-      transcript.user(),
-
-      # AFTER
-      transcript.user(),
-      llm,
-
-      transport.output(),
-      transcript.assistant(),
-      context_aggregator.assistant(),
-    ]
+      [
+          transport.input(),
+          context_aggregator.user(),
+          # BEFORE
+          llm,
+          transcript.user(),
+          # AFTER
+          transcript.user(),
+          llm,
+          transport.output(),
+          transcript.assistant(),
+          context_aggregator.assistant(),
+      ]
   )
   ```
 
@@ -6957,8 +6947,7 @@ PIPECAT_SETUP_FILES="setup1.py:setup.py:..."`). Each file must define a
 
   ```python
   @task.event_handler("on_pipeline_error")
-  async def on_pipeline_error(task: PipelineTask, frame: ErrorFrame):
-      ...
+  async def on_pipeline_error(task: PipelineTask, frame: ErrorFrame): ...
   ```
 
 - Added a `service_tier` `InputParam` to the `BaseOpenAILLMService`. This
@@ -7152,8 +7141,7 @@ PIPECAT_SETUP_FILES="setup1.py:setup.py:..."`). Each file must define a
 
   ```python
   @task.event_handler("on_pipeline_finished")
-  async def on_pipeline_finished(task: PipelineTask, frame: Frame):
-      ...
+  async def on_pipeline_finished(task: PipelineTask, frame: Frame): ...
   ```
 
 - Added support for new RTVI `send-text` event, along with the ability to toggle
@@ -7554,6 +7542,7 @@ PIPECAT_SETUP_FILES="setup1.py:setup.py:..."`). Each file must define a
 
   # ...
 
+
   @transport.event_handler("on_client_connected")
   async def on_client_connected(transport, client):
       # Kick off the conversation.
@@ -7639,15 +7628,15 @@ PIPECAT_SETUP_FILES="setup1.py:setup.py:..."`). Each file must define a
 
   # Create your pipeline
   pipeline = Pipeline(
-    [
-        transport.input(),
-        stt,
-        context_aggregator.user(),
-        llm_switcher,
-        tts,
-        transport.output(),
-        context_aggregator.assistant(),
-    ]
+      [
+          transport.input(),
+          stt,
+          context_aggregator.user(),
+          llm_switcher,
+          tts,
+          transport.output(),
+          context_aggregator.assistant(),
+      ]
   )
   task = PipelineTask(pipeline, params=PipelineParams(allow_interruptions=True))
 
@@ -8382,16 +8371,17 @@ quality and critical bugs impacting `ParallelPipelines` functionality.**
   # "Direct" function
   # `params` must be the first parameter
   async def do_something(params: FunctionCallParams, foo: int, bar: str = ""):
-    """
-    Do something interesting.
+      """
+      Do something interesting.
 
-    Args:
-      foo (int): The foo to do something interesting with.
-      bar (string): The bar to do something interesting with.
-    """
+      Args:
+        foo (int): The foo to do something interesting with.
+        bar (string): The bar to do something interesting with.
+      """
 
-    result = await process(foo, bar)
-    await params.result_callback({"result": result})
+      result = await process(foo, bar)
+      await params.result_callback({"result": result})
+
 
   # ...
 
@@ -9084,11 +9074,13 @@ asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
   provide a mixer per destination. For example:
 
 ```python
-  audio_out_mixer={
-      "track-1": SoundfileMixer(...),
-      "track-2": SoundfileMixer(...),
-      "track-N": SoundfileMixer(...),
-  },
+audio_out_mixer = (
+    {
+        "track-1": SoundfileMixer(...),
+        "track-2": SoundfileMixer(...),
+        "track-N": SoundfileMixer(...),
+    },
+)
 ```
 
 - The `STTMuteFilter` now mutes `InterimTranscriptionFrame` and
@@ -9696,11 +9688,11 @@ https://en.wikipedia.org/wiki/Saint_George%27s_Day_in_Catalonia
 
     ```python
     session_properties = SessionProperties(
-      # ...
-      input_audio_noise_reduction=InputAudioNoiseReduction(
-        type="near_field" # also supported: "far_field"
-      )
-      # ...
+        # ...
+        input_audio_noise_reduction=InputAudioNoiseReduction(
+            type="near_field"  # also supported: "far_field"
+        )
+        # ...
     )
     ```
 

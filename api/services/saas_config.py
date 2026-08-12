@@ -18,6 +18,7 @@ from api.constants import (
     RAZORPAY_KEY_SECRET,
     RAZORPAY_WEBHOOK_SECRET,
 )
+from api.services.security import credential_crypto
 
 _DEFAULT_JWT_SECRET = "change-me-in-production"
 
@@ -39,6 +40,19 @@ def validate_saas_config() -> None:
         problems.append("OSS_JWT_SECRET must be set to a non-default value")
     if not CORS_ALLOWED_ORIGINS:
         problems.append("CORS_ALLOWED_ORIGINS must be an explicit allowlist")
+    # Phase 4a: credential encryption is optional for OSS self-hosters, who
+    # would otherwise be forced to manage a key, but mandatory here — a hosted
+    # deployment holds other people's carrier accounts and the platform's own
+    # provider keys.
+    try:
+        if credential_crypto.get_cipher() is None:
+            problems.append(
+                "CREDENTIAL_ENCRYPTION_KEYS is required in saas mode "
+                "(generate one with Fernet.generate_key())"
+            )
+    except credential_crypto.CredentialEncryptionError as e:
+        problems.append(str(e))
+
     if BILLING_PAYMENTS_ENABLED:
         for name, value in (
             ("RAZORPAY_KEY_ID", RAZORPAY_KEY_ID),

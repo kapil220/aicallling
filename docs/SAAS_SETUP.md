@@ -398,6 +398,70 @@ fail with Twilio's error message shown verbatim to the user.
 Superadmins can list every provisioned number across orgs:
 `GET /api/v1/superuser/platform-numbers`.
 
+## Step 7: Credential Encryption at Rest (Phase 4a)
+
+Every third-party credential the platform stores — tenants' carrier accounts,
+integration tokens, and the platform's own AI provider keys copied into each
+org's model configuration — is encrypted at rest so that a database dump or a
+stolen backup does not hand them over.
+
+Encryption is **optional for OSS self-hosters and mandatory in saas mode**:
+boot validation refuses to start without a key.
+
+### Environment Variables
+
+```bash
+# Comma-separated list. The first key encrypts; every key is tried for
+# decryption, which is what makes rotation a restart rather than a migration.
+CREDENTIAL_ENCRYPTION_KEYS=<key>
+```
+
+Generate a key with:
+
+```bash
+python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+```
+
+> **Back the keys up somewhere other than the machine holding the database.**
+> Losing every key while encrypted data exists is the one unrecoverable
+> failure in this design — no amount of care elsewhere recovers from it.
+
+### Rollout Order
+
+Each step depends on the previous one still being readable. Steps 1–3 are
+individually revertible; after step 4, `--decrypt` is the escape hatch while a
+key is still available.
+
+1. **Deploy the code with no key configured.** Behaviour is unchanged. This
+   proves the read path is transparent before any data moves.
+2. **Run migrations** (`./scripts/migrate.sh`). This adds
+   `telephony_configurations.account_id` and backfills it from the
+   still-plaintext credentials. Inbound dispatch matches on that column, so it
+   must be populated before the blob becomes unreadable.
+3. **Restart.** Inbound routing no longer depends on the credentials JSON.
+4. **Set `CREDENTIAL_ENCRYPTION_KEYS` and restart.** New writes encrypt;
+   existing plaintext rows still read, because decryption is decided by
+   inspecting each value rather than by whether encryption is switched on.
+5. **Convert existing rows:**
+
+   ```bash
+   python -m scripts.encrypt_credentials            # dry run — reports, writes nothing
+   python -m scripts.encrypt_credentials --apply
+   python -m scripts.encrypt_credentials --verify   # exits 1 if any plaintext remains
+   ```
+
+   The script is idempotent and commits per batch, so an interrupted run
+   resumes where it stopped. `--verify` belongs in the launch checklist: a row
+   that never gets encrypted reads fine forever and is otherwise silent.
+
+### Rotating a Key
+
+Prepend the new key, restart, re-encrypt, then drop the old one:
+
+```bash
+CREDENTIAL_ENCRYPTION_KEYS=<new-key>,<old-key>
+```
+
 ## Troubleshooting
 
 ### Backend Won't Start: SaaS Config Validation Fails
@@ -407,6 +471,15 @@ Check `api/.env` for the listed missing/invalid variables:
 - `CLERK_WEBHOOK_SECRET` not set → add webhook signing secret from Clerk dashboard
 - `OSS_JWT_SECRET` still set to default → run `openssl rand -hex 32` and use the output
 - `CORS_ALLOWED_ORIGINS` is empty → set to at least one frontend URL (no wildcards)
+- `CREDENTIAL_ENCRYPTION_KEYS` not set → generate a Fernet key (see Step 7)
+
+### Reads Fail With "no configured key opens this token"
+
+A credential was encrypted with a key that is no longer in
+`CREDENTIAL_ENCRYPTION_KEYS`. This is deliberately fatal rather than silent —
+returning nothing here would surface as calls failing to authenticate against
+the carrier, which is far harder to diagnose. Restore the missing key (it can
+be appended, not just first) and restart.
 
 ### Calls Are Being Denied
 
@@ -435,5 +508,6 @@ Check that:
 5. ✅ Make a user superuser and seed default pricing rule
 6. ✅ Start backend and frontend
 7. ✅ Test sign-up and call authorization
+8. ✅ Configure `CREDENTIAL_ENCRYPTION_KEYS` and run the encryption backfill
 
 SaaS mode is now ready for testing or deployment.

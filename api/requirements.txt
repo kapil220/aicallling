@@ -23,3 +23,4 @@ PyNaCl==1.6.2
 razorpay
 stripe
 svix==1.45.1
+cryptography==49.0.0
