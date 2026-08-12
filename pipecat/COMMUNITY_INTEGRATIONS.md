@@ -275,6 +275,7 @@ from dataclasses import dataclass, field
 
 from pipecat.services.settings import TTSSettings, NOT_GIVEN
 
+
 @dataclass
 class MyTTSSettings(TTSSettings):
     """Settings for MyTTS service.
@@ -305,6 +306,7 @@ Add a `Settings` **class attribute** that points to your settings dataclass. Thi
 
 ```python
 from typing import Optional
+
 
 class MyTTSService(TTSService):
     Settings = MyTTSSettings
