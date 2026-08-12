@@ -197,9 +197,10 @@ class TelephonyPhoneNumberClient(BaseDBClient):
         address_normalized) — see ``find_inbound_route_by_account``. That tuple
         must be globally unique or two orgs would race for the same call.
 
-        Since phase 4a a partial unique index enforces that invariant in the
-        database as well. This check stays because it can name the conflicting
-        row and org, which an IntegrityError cannot.
+        The invariant spans two tables — ``provider``/``account_id`` live on
+        the config, ``address_normalized`` on the phone number — so no unique
+        index can express it. This application-level check remains the only
+        thing enforcing it.
 
         Returns the conflicting (config, phone_number) — possibly in another
         org — when inserting a row with this combination would break that
